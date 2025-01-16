@@ -1,5 +1,11 @@
+import ChessGame from "./ChessGame";
+
 function App() {
-  return <div className="text-3xl text-red-800">Hi</div>;
+    return (
+        <div className="w-screen h-screen flex flex-col items-center justify-center">
+            <ChessGame />
+        </div>
+    );
 }
 
 export default App;
