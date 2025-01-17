@@ -1,12 +1,19 @@
 import { Chess } from "chess.js";
-import { useEffect, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { Piece, Square } from "react-chessboard/dist/chessboard/types";
+import { Socket } from "socket.io-client";
 
-const ChessGame = () => {
-    const [game, setGame] = useState(new Chess());
-    const [moveLog, setMoveLog] = useState<string[]>([]);
-
+const ChessGame = ({
+    socket,
+    boardOrientation,
+    roomId,
+    game,
+}: {
+    socket: Socket | null;
+    boardOrientation: "white" | "black";
+    roomId: string;
+    game: Chess;
+}) => {
     const getGameStatus = () => {
         if (game.isGameOver()) {
             if (game.isCheckmate()) return "Checkmate";
@@ -16,61 +23,49 @@ const ChessGame = () => {
             return "Game Over!";
         }
 
-        if (game.inCheck()) return "Check ";
+        if (game.inCheck()) return "Check";
 
         return `${game.turn() === "w" ? "White" : "Black"} to move`;
     };
 
-    const resetGame = () => {
-        setGame(new Chess());
-        setMoveLog([]);
-    };
-
     const onDrop = (srcSq: Square, tgtSq: Square, piece: Piece) => {
+        // Prevent the opponent from moving
+        if (
+            (game.turn() === "w" && boardOrientation === "black") ||
+            (game.turn() === "b" && boardOrientation === "white")
+        )
+            return false;
+
         try {
-            const newGame = new Chess(game.fen());
-            const move = newGame.move({
+            const tempGame = new Chess(game.fen());
+            const move = tempGame.move({
                 from: srcSq,
                 to: tgtSq,
                 promotion: piece[1].toLowerCase() ?? "q",
             });
-            if (move) {
-                setGame(newGame);
-                const moveNotation = `${
-                    game.turn() === "w" ? "Black" : "White"
-                }: ${move.san}`;
-                setMoveLog((prev) => {
-                    return [...prev, moveNotation];
-                });
-
-                return true;
+            if (move && socket) {
+                socket.emit("make-move", { roomId, move: move.san });
+                return false;
+            } else {
+                console.log("wrong move");
             }
         } catch (error) {
             return false;
         }
-        return true;
+        return false;
     };
 
-    useEffect(() => {
-        console.log(moveLog);
-    }, [moveLog]);
-
     return (
-        <div className="flex flex-col items-center justify-center w-full h-full">
-            <h1 className="text-[40px]">Game Status: {getGameStatus()}</h1>
-            <div className="aspect-square w-[90vw] max-w-[90vh]">
+        <div className="flex flex-col items-center justify-center w-full h-full bg-black text-white">
+            <h1 className="text-lg m-1">Room ID: {roomId}</h1>
+            <h1 className="text-lg">Game Status: {getGameStatus()}</h1>
+            <div className="aspect-square w-[600px] max-w-[90vh]">
                 <Chessboard
                     position={game.fen()}
                     onPieceDrop={onDrop}
-                    boardOrientation="black"
+                    boardOrientation={boardOrientation}
                 />
             </div>
-            <button
-                className="mt-4 px-4 py-2 bg-blue-500 text-white text-[60px] rounded hover:bg-blue-600"
-                onClick={resetGame}
-            >
-                Reset Game
-            </button>
         </div>
     );
 };
