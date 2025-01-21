@@ -1,0 +1,12 @@
+CREATE TABLE "Users" (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    salt TEXT NOT NULL,
+    update_password_token TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+SELECT * FROM Users;
