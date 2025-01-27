@@ -23,7 +23,7 @@ const FormInput = ({
                 setInputState(e.target.value)
             }
             placeholder={placeholder}
-            className={` bg-gray-800 outline-none rounded-md text-white text-lg p-1 ${className}`}
+            className={` text-opacity-75 bg-gray-800 outline-none rounded-md text-white text-lg p-1 ${className}`}
         />
     );
 };

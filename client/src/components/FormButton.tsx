@@ -7,20 +7,26 @@ type ClickHandler<T extends HTMLElement> = (
 const FormButton = ({
     children,
     className,
-    isLoading,
+    isLoading = false,
+    isActive = true,
     onClick = () => {},
 }: {
     children?: ReactNode;
     className?: string;
-    isLoading: boolean;
+    isLoading?: boolean;
+    isActive?: boolean;
     onClick?: ClickHandler<HTMLButtonElement>;
 }) => {
     return (
         <button
-            onClick={onClick}
+            onClick={isActive ? onClick : () => {}}
             className={`text-lg 
-                        px-2 py-1 rounded-md cursor-pointer
-                        hover:opacity-50 active:opacity-30 transition 
+                        px-2 py-1 rounded-md 
+                        ${
+                            isActive
+                                ? "cursor-pointer hover:opacity-50 active:opacity-30 transition"
+                                : "cursor-auto opacity-30"
+                        } 
                         flex justify-center items-center
                         ${className}`}
         >

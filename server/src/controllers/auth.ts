@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { transaction } from "../db/postgres";
+import { queryClient, transaction } from "../db/postgres";
 import {
     sendClientSideError,
     sendSuccessResponse,
@@ -9,11 +9,6 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
-/**
- * Handles the request to sign up a new user.
- * @param req The Request object.
- * @param res The Response object.
- */
 export const signupHandler = async (
     req: Request,
     res: Response,
@@ -21,13 +16,11 @@ export const signupHandler = async (
 ) => {
     try {
         const { email, username, password } = req.body;
-        // Start a new transaction
         await transaction(async (client) => {
-            // Check if a user with the given email address already exists
             const userWithThisEmail = await findOneWithCondition(
                 client,
                 "Users",
-                ["id"],
+                ["username"],
                 {
                     email,
                 }
@@ -39,11 +32,10 @@ export const signupHandler = async (
                     "User with this email address already exists"
                 );
 
-            // Check if a user with the given username already exists
             const userWithThisUsername = await findOneWithCondition(
                 client,
                 "Users",
-                ["id"],
+                ["username"],
                 {
                     username,
                 }
@@ -55,49 +47,47 @@ export const signupHandler = async (
                     "User with this username already exists"
                 );
 
-            // Generate a new salt and hashed password
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash(password, salt);
 
-            // Generate a new update password token
             const updatePasswordToken = crypto.randomBytes(32).toString("hex");
 
-            // Insert the new user into the database
-            const { id: newUserId } = await insertRecord(client, "Users", {
-                username,
-                email,
-                password: hashedPassword,
-                salt,
-                update_password_token: updatePasswordToken,
-            });
+            const { username: newUsername } = await insertRecord(
+                client,
+                "Users",
+                {
+                    username,
+                    email,
+                    password: hashedPassword,
+                    salt,
+                    update_password_token: updatePasswordToken,
+                },
+                "username"
+            );
 
-            // Retrieve the new user from the database
             const newUser = await findOneWithCondition(
                 client,
                 "Users",
                 [
-                    "id",
                     "username",
                     "email",
                     "created_at",
                     "last_active",
                     "update_password_token",
                 ],
-                { id: newUserId }
+                { username: newUsername }
             );
 
-            // Generate a JWT token for the new user
             const jwtToken = jwt.sign(
                 {
-                    id: newUser.id,
-                    email: newUser.email,
+                    username: newUser.username,
                     updatePasswordToken: newUser.update_password_token,
+                    isGuest: false,
                 },
                 process.env.JWT_SECRET_KEY as string,
                 { expiresIn: "48h" }
             );
 
-            // Send the success response with the JWT token and the new user's details
             return sendSuccessResponse(
                 req,
                 res,
@@ -106,7 +96,6 @@ export const signupHandler = async (
                 {
                     jwtToken,
                     user: {
-                        id: newUser.id,
                         username: newUser.username,
                         email: newUser.email,
                         createdAt: newUser.created_at,
@@ -120,12 +109,6 @@ export const signupHandler = async (
     }
 };
 
-/**
- * Handles the user login request.
- * @param req The request.
- * @param res The response.
- * @param next The next middleware function.
- */
 export const loginHandler = async (
     req: Request,
     res: Response,
@@ -134,48 +117,39 @@ export const loginHandler = async (
     try {
         const { username, email, password } = req.body;
 
-        // Start a transaction to ensure that all operations are atomic
         await transaction(async (client) => {
             let user = null;
             if (username) {
-                // Retrieve the user with the specified username
                 user = await findOneWithCondition(client, "Users", null, {
                     username,
                 });
                 if (!user) {
-                    // If the user does not exist, return a 400 Bad Request error
                     return sendClientSideError(req, res, `Invalid Credentials`);
                 }
             } else {
-                // Retrieve the user with the specified email address
                 user = await findOneWithCondition(client, "Users", null, {
                     email,
                 });
                 if (!user) {
-                    // If the user does not exist, return a 400 Bad Request error
                     return sendClientSideError(req, res, `Invalid Credentials`);
                 }
             }
 
-            // Hash the provided password with the user's salt
             const hashedPassword = await bcrypt.hash(password, user.salt);
             if ((user.password as string) !== hashedPassword) {
-                // If the password does not match, return a 400 Bad Request error
                 return sendClientSideError(req, res, `Incorrect credentials`);
             }
 
-            // Generate a JWT token for the user
             const jwtToken = jwt.sign(
                 {
-                    id: user.id,
-                    email: user.email,
+                    username: user.username,
                     updatePasswordToken: user.update_password_token,
+                    isGuest: false,
                 },
                 process.env.JWT_SECRET_KEY as string,
                 { expiresIn: "48h" }
             );
 
-            // Send a success response with the JWT token and the user's details
             return sendSuccessResponse(
                 req,
                 res,
@@ -184,16 +158,85 @@ export const loginHandler = async (
                 {
                     jwtToken,
                     user: {
-                        id: user.id,
                         username: user.username,
                         email: user.email,
-                        createdAt: user.createdAt,
-                        lastActive: user.lastActive,
+                        createdAt: user.created_at,
+                        lastActive: user.last_active,
                     },
                 }
             );
         });
     } catch (err) {
         next(err);
+    }
+};
+
+export const createGuestHandler = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    const generateGuestId = () => {
+        return crypto.randomBytes(12).toString("base64url").slice(0, 16);
+    };
+
+    try {
+        await transaction(async (client) => {
+            let newGuestId: string;
+            let guestIdExists = true;
+            do {
+                newGuestId = generateGuestId();
+                guestIdExists = await findOneWithCondition(
+                    client,
+                    "Guests",
+                    ["guest_id"],
+                    { guest_id: newGuestId }
+                );
+            } while (guestIdExists);
+
+            const { guest_id: guestId } = await insertRecord(
+                client,
+                "Guests",
+                { guest_id: newGuestId },
+                "guest_id"
+            );
+
+            const jwtToken = jwt.sign(
+                {
+                    guestId,
+                    isGuest: true,
+                },
+                process.env.JWT_SECRET_KEY as string,
+                { expiresIn: "48h" }
+            );
+
+            return sendSuccessResponse(
+                req,
+                res,
+                `Guest: ${guestId} registered successfully`,
+                201,
+
+                { jwtToken, user: { guestId: guestId } }
+            );
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const cleanupGuests = async () => {
+    try {
+        const now = new Date();
+        const cutoffTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+        await transaction(async (client) => {
+            await queryClient(
+                client,
+                `DELETE FROM "Guests" WHERE created_at < $1`,
+                [cutoffTime]
+            );
+        });
+    } catch (err) {
+        console.error(err);
     }
 };

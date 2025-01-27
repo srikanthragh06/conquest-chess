@@ -11,6 +11,7 @@ const AuthPage = () => {
             hasNavbar={false}
             authRequired={false}
             noAuthRequired={true}
+            registeredRequired={false}
             className="items-center justify-center"
         >
             {isLogin ? (

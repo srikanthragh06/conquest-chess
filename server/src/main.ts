@@ -1,5 +1,4 @@
 import express from "express";
-import http from "http";
 import cors from "cors";
 import { consoleLogCyan } from "./utils/colorConsoleLogging";
 import bodyParser from "body-parser";
@@ -12,9 +11,11 @@ import { logRequest } from "./utils/logging";
 import dotenv from "dotenv";
 import { testDatabaseConnection } from "./db/postgres";
 import authRouter from "./routers/auth";
+import userRouter from "./routers/user";
+import { handleIOConnection } from "./sockets/main";
+import { app, io, server } from "./server";
 
-const app = express();
-const server = http.createServer(app);
+io.on("connection", handleIOConnection);
 
 dotenv.config();
 
@@ -29,12 +30,8 @@ app.use(logRequest);
 app.use(incorrectJSONFormatHandler);
 
 // main routes
-app.get("/", (req, res) => {
-    throw new Error("new error");
-    res.send("Hello World!");
-});
-
 app.use("/api/auth", authRouter);
+app.use("/api/user", userRouter);
 
 app.use("/*", urlNotFoundHandler);
 app.use(globalErrorHandler);

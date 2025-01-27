@@ -1,19 +1,30 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useRecoilValue, useSetRecoilState } from "recoil";
-import { isLoggedInState } from "../store/auth";
-import { getAuthToken } from "../utils/token";
-import { isAuthApi } from "../api/auth";
+import { isLoggedInState, userDetailsState } from "../store/auth";
+import { getAuthToken, setAuthToken } from "../utils/token";
+import { createGuestApi, isAuthApi } from "../api/auth";
 
 const useIsAuthPage = (authRequired: boolean, noAuthRequired: boolean) => {
     const navigate = useNavigate();
+    const location = useLocation();
     const isLoggedIn = useRecoilValue(isLoggedInState);
     const setIsLoggedIn = useSetRecoilState(isLoggedInState);
+    const setUserDetails = useSetRecoilState(userDetailsState);
+
+    const resetAuthState = () => {
+        setIsLoggedIn(false);
+        setUserDetails({
+            id: null,
+            isGuest: false,
+        });
+    };
 
     const handleIsAuth = async () => {
         const token = getAuthToken();
         if (!token) {
-            setIsLoggedIn(false);
+            resetAuthState();
+            handleCreateGuest();
             return false;
         }
 
@@ -21,26 +32,58 @@ const useIsAuthPage = (authRequired: boolean, noAuthRequired: boolean) => {
             const res = await isAuthApi(token);
             if (res) {
                 if (!res.data?.error) {
-                    setIsLoggedIn(true);
+                    if (res.data.user.isGuest)
+                        setUserDetails({
+                            id: res.data.user.guestId,
+                            isGuest: true,
+                        });
+                    else
+                        setUserDetails({
+                            id: res.data.user.username,
+                            isGuest: false,
+                        });
+                    setIsLoggedIn(!res.data.user?.isGuest);
                     return true;
                 } else {
-                    setIsLoggedIn(false);
+                    resetAuthState();
+                    handleCreateGuest();
                     return false;
                 }
             } else {
-                setIsLoggedIn(false);
+                resetAuthState();
+                handleCreateGuest();
                 return false;
             }
         } catch (err) {
             console.error(err);
-            setIsLoggedIn(false);
+            resetAuthState();
+            handleCreateGuest();
             return false;
+        }
+    };
+
+    const handleCreateGuest = async () => {
+        try {
+            const res = await createGuestApi();
+            if (res) {
+                if (!res.data?.error) {
+                    setUserDetails({
+                        id: res.data.user.guestId,
+                        isGuest: true,
+                    });
+                    setAuthToken(res.data.jwtToken);
+                } else {
+                }
+            } else {
+            }
+        } catch (err) {
+            console.error(err);
         }
     };
 
     useEffect(() => {
         handleIsAuth();
-    }, [navigate]);
+    }, [location.pathname, isLoggedIn]);
 
     useEffect(() => {
         if (authRequired) {

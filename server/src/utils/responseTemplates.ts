@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
-import { logResponse } from "./logging";
+import { logResponse, logSocketEmit, logSocketEmitRoom } from "./logging";
+import { Server as SocketIOServer, Socket } from "socket.io";
 
 /**
  * Sends a response to the client indicating that the request was invalid.
@@ -55,4 +56,40 @@ export const sendSuccessResponse = (
 ) => {
     logResponse(req, message, statusCode);
     return res.status(statusCode).json({ message, ...additionals });
+};
+
+/**
+ * Emits an event to the given socket.
+ * @param socket The socket to emit the event to.
+ * @param event The name of the event to emit.
+ * @param data The data to send with the event. Defaults to null.
+ * @param isError Whether the event is an error event. Defaults to false.
+ */
+export const socketEmit = (
+    socket: Socket,
+    event: string,
+    data: any = null,
+    isError = false
+) => {
+    logSocketEmit(socket, event, data, isError);
+    socket.emit(event, data);
+};
+
+/**
+ * Emits an event to all the sockets in the given room.
+ * @param io The Socket.IO server.
+ * @param roomId The ID of the room to emit the event to.
+ * @param event The name of the event to emit.
+ * @param data The data to send with the event. Defaults to null.
+ * @param isError Whether the event is an error event. Defaults to false.
+ */
+export const socketEmitRoom = (
+    io: SocketIOServer,
+    roomId: string,
+    event: string,
+    data: any = null,
+    isError = false
+) => {
+    logSocketEmitRoom(roomId, event, data, isError);
+    io.to(roomId).emit(event, data);
 };

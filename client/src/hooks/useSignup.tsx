@@ -2,13 +2,14 @@ import { FormEvent, useState } from "react";
 import { signupApi } from "../api/auth";
 import { useNavigate } from "react-router-dom";
 import { useSetRecoilState } from "recoil";
-import { isLoggedInState } from "../store/auth";
+import { isLoggedInState, userDetailsState } from "../store/auth";
 import { setAuthToken } from "../utils/token";
 
 const useSignup = () => {
     const navigate = useNavigate();
 
     const setIsLoggedIn = useSetRecoilState(isLoggedInState);
+    const setUserDetails = useSetRecoilState(userDetailsState);
 
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
@@ -18,6 +19,10 @@ const useSignup = () => {
     const [signupError, setSignupError] = useState("");
 
     const [isSignupLoading, setIsSignupLoading] = useState(false);
+
+    const resetAuthState = () => {
+        setIsLoggedIn(false);
+    };
 
     const handleSignup = async (e: FormEvent) => {
         e.preventDefault();
@@ -44,23 +49,33 @@ const useSignup = () => {
 
             if (res) {
                 if (!res.data?.error) {
-                    // setUserDetails(res.data.user);
+                    if (res.data.user.isGuest)
+                        setUserDetails({
+                            id: res.data.user.guestId,
+                            isGuest: true,
+                        });
+                    else
+                        setUserDetails({
+                            id: res.data.user.username,
+                            isGuest: false,
+                        });
+
                     setIsLoggedIn(true);
                     setAuthToken(res.data.jwtToken);
                     setSignupError("");
                     navigate("/");
                 } else {
-                    setIsLoggedIn(false);
+                    resetAuthState();
                     setSignupError(res?.data?.error || "Error");
                 }
             } else {
-                setIsLoggedIn(false);
+                resetAuthState();
                 setSignupError("No response from server.");
             }
         } catch (error) {
             console.error(error);
+            resetAuthState();
             setSignupError("An error occurred during signin.");
-            setIsLoggedIn(false);
         } finally {
             setIsSignupLoading(false);
         }

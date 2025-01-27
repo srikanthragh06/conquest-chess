@@ -5,6 +5,7 @@ import {
 } from "./colorConsoleLogging";
 import { Request, Response, NextFunction } from "express";
 import { IncomingHttpHeaders } from "http";
+import { Server as SocketIOServer, Socket } from "socket.io";
 
 /**
  * Gets the client IP address from the request headers.
@@ -80,14 +81,72 @@ export const logResponse = (
 };
 
 /**
- * Logs a message to the console for events related to socket connections.
- * @param eventType The type of event that occurred (e.g. "connection", "disconnect", etc.)
- * @param details Additional details about the event
+ * Logs when an event is registered on a socket.
+ * @param socket The socket instance on which the event is registered.
+ * @param event The name of the event being registered.
  */
-export const logSocket = (eventType: string, details: string): void => {
-    const timestamp = new Date().toISOString(); // Use ISO format for better compatibility
-    const logMsg = `[SOCKET] | ${timestamp} | Event: ${eventType} | Details: ${details}`;
+export const logSocketOn = (socket: Socket, event: string) => {
+    // Capture the current timestamp
+    const timestamp = new Date().toLocaleString();
 
-    // Log the message in blue color
-    consoleLogBlue(logMsg);
+    // Log the event registration details in blue
+    consoleLogBlue(
+        `ON SOCKET | ${socket.id} | ${timestamp} | ${event} | ${timestamp}`
+    );
+};
+
+/**
+ * Logs when an event is emitted on a socket.
+ * @param socket The socket instance on which the event is emitted.
+ * @param event The name of the event being emitted.
+ * @param data The data being sent with the event.
+ * @param isError Whether the event was emitted due to an error.
+ */
+export const logSocketEmit = (
+    socket: Socket,
+    event: string,
+    data: any = null,
+    isError = false
+) => {
+    const timestamp = new Date().toLocaleString();
+    if (isError) {
+        consoleLogRed(
+            `EMIT SOCKET | ${
+                socket.id
+            } | ${timestamp} | ${event} | ${timestamp} | ${data || ""}`
+        );
+    } else {
+        consoleLogGreen(
+            `EMIT SOCKET | ${socket.id} | ${timestamp} | ${event} | ${timestamp}`
+        );
+    }
+};
+
+/**
+ * Logs when an event is emitted on a room.
+ * @param roomId The ID of the room on which the event is emitted.
+ * @param event The name of the event being emitted.
+ * @param data The data being sent with the event.
+ * @param isError Whether the event was emitted due to an error.
+ */
+export const logSocketEmitRoom = (
+    roomId: string,
+    event: string,
+    data: any = null,
+    isError = false
+) => {
+    const timestamp = new Date().toLocaleString();
+    if (isError) {
+        // Log the event registration details in red
+        consoleLogRed(
+            `EMIT ROOM | ${roomId} | ${timestamp} | ${event} | ${timestamp} | ${
+                data || ""
+            }`
+        );
+    } else {
+        // Log the event registration details in green
+        consoleLogGreen(
+            `EMIT ROOM | ${roomId} | ${timestamp} | ${event} | ${timestamp}`
+        );
+    }
 };

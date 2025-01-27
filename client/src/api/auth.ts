@@ -62,3 +62,13 @@ export const isAuthApi = async (token: string) => {
         return error.response;
     }
 };
+
+export const createGuestApi = async () => {
+    try {
+        const res: AxiosResponse = await client.post("/auth/create-guest");
+        return res;
+    } catch (err) {
+        const error = err as AxiosError;
+        return error.response;
+    }
+};
