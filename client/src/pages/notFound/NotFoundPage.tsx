@@ -6,6 +6,7 @@ const NotFoundPage = () => {
             hasNavbar={false}
             authRequired={false}
             noAuthRequired={false}
+            registeredRequired={false}
             className="items-center justify-center"
         >
             <div className="sm:text-lg text-base text-center">
