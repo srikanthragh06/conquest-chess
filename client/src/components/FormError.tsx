@@ -1,7 +1,13 @@
 import { ReactNode } from "react";
 
-const FormError = ({ children }: { children?: ReactNode }) => {
-    return <p className="text-red-600 text-base">{children}</p>;
+const FormError = ({
+    children,
+    className,
+}: {
+    children?: ReactNode;
+    className?: string;
+}) => {
+    return <p className={`text-red-600 text-base ${className}`}>{children}</p>;
 };
 
 export default FormError;

@@ -1,13 +1,22 @@
+import { useEffect, useState } from "react";
+import { socket } from "../socket/main";
 import { Chess, Move } from "chess.js";
-import { useState } from "react";
-import { Chessboard } from "react-chessboard";
+import { useParams } from "react-router-dom";
 import {
     PromotionPieceOption,
     Square,
 } from "react-chessboard/dist/chessboard/types";
+import { userDetailsState } from "../store/auth";
+import { useRecoilValue } from "recoil";
+import { gameType } from "../types/game";
 
-const ChessGame2 = () => {
-    const [game, setGame] = useState(new Chess());
+const useGame = () => {
+    const { gameId } = useParams();
+    const userDetails = useRecoilValue(userDetailsState);
+
+    const [game, setGame] = useState<gameType | null>(null);
+
+    const [board, setBoard] = useState(new Chess());
     const [moveFrom, setMoveFrom] = useState<Square | null>(null);
     const [moveTo, setMoveTo] = useState<Square | null>(null);
     const [showPromotionDialog, setShowPromotionDialog] = useState(false);
@@ -15,9 +24,21 @@ const ChessGame2 = () => {
         Record<string, { background: string; borderRadius?: string }>
     >({});
     const [isWhiteTurn, setIsWhiteTurn] = useState(true);
+    const [gameError, setGameError] = useState<string | null>(null);
+
+    const isValidTurn = () => {
+        const userId = userDetails.isGuest
+            ? `Guest_${userDetails.id}`
+            : userDetails.id;
+
+        return (
+            (userId === game?.whiteId && board.turn() === "w") ||
+            (userId === game?.blackId && board.turn() === "b")
+        );
+    };
 
     const highlightMoveOptions = (square: Square): boolean => {
-        const moves = game.moves({ square, verbose: true }) as Move[];
+        const moves = board.moves({ square, verbose: true }) as Move[];
         if (moves.length === 0) {
             setOptionSquares({});
             return false;
@@ -30,7 +51,7 @@ const ChessGame2 = () => {
         moves.forEach((move) => {
             newSquares[move.to] = {
                 background:
-                    game.get(move.to)?.color !== game.get(square)?.color
+                    board.get(move.to)?.color !== board.get(square)?.color
                         ? "radial-gradient(circle, rgba(0,0,0,.1) 85%, transparent 85%)"
                         : "radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)",
                 borderRadius: "50%",
@@ -42,12 +63,17 @@ const ChessGame2 = () => {
     };
 
     const handleSquareClick = (square: Square): void => {
+        if (!isValidTurn()) return;
+
         if (!moveFrom) {
             if (highlightMoveOptions(square)) setMoveFrom(square);
             return;
         }
 
-        const moves = game.moves({ square: moveFrom, verbose: true }) as Move[];
+        const moves = board.moves({
+            square: moveFrom,
+            verbose: true,
+        }) as Move[];
         const validMove = moves.find(
             (m) => m.from === moveFrom && m.to === square
         );
@@ -73,19 +99,23 @@ const ChessGame2 = () => {
     };
 
     const makeMove = (from: Square, to: Square, promotion: string) => {
-        const updatedGame = new Chess(game.fen());
-        updatedGame.move({ from, to, promotion });
-        setGame(updatedGame);
+        if (!isValidTurn()) return;
+        if (game && game.gameStatus.status !== "playing") return;
+
+        const updatedBoard = new Chess(board.fen());
+        updatedBoard.move({ from, to, promotion });
+        setBoard(updatedBoard);
         setMoveFrom(null);
         setMoveTo(null);
         setOptionSquares({});
         setIsWhiteTurn(!isWhiteTurn);
+        socket.emit("make-move", { gameId, move: { from, to, promotion } });
     };
 
     const handlePieceDrop = (srcSq: Square, tgtSq: Square): boolean => {
-        const updatedGame = new Chess(game.fen());
+        const updatedBoard = new Chess(board.fen());
         try {
-            const move = updatedGame.move({
+            const move = updatedBoard.move({
                 from: srcSq,
                 to: tgtSq,
                 promotion: "q",
@@ -109,7 +139,7 @@ const ChessGame2 = () => {
     ) => {
         if (piece && moveFrom && moveTo) {
             try {
-                const tempBoard = new Chess(game.fen());
+                const tempBoard = new Chess(board.fen());
                 const move = tempBoard.move({
                     from: moveFrom,
                     to: moveTo,
@@ -125,7 +155,7 @@ const ChessGame2 = () => {
             }
         } else if (piece && promoteFromSquare && promoteToSquare) {
             try {
-                const tempBoard = new Chess(game.fen());
+                const tempBoard = new Chess(board.fen());
                 const move = tempBoard.move({
                     from: promoteFromSquare,
                     to: promoteToSquare,
@@ -155,26 +185,83 @@ const ChessGame2 = () => {
         setOptionSquares({});
     };
 
-    return (
-        <div className="w-1/2">
-            <Chessboard
-                id="ClickToMove"
-                animationDuration={20}
-                arePiecesDraggable={true}
-                position={game.fen()}
-                onPieceDrop={handlePieceDrop}
-                onSquareClick={handleSquareClick}
-                customBoardStyle={{
-                    borderRadius: "4px",
-                    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.5)",
-                }}
-                customSquareStyles={optionSquares}
-                promotionToSquare={moveTo}
-                showPromotionDialog={showPromotionDialog}
-                onPromotionPieceSelect={onPromotionPieceSelect}
-            />
-        </div>
-    );
+    const getGameStatusMsg = () => {
+        if (!game) return "";
+
+        if (game.gameStatus.status === "playing") {
+            if (game.moves.length % 2 === 0) return "White to play!";
+            else return "Black to play!";
+        } else if (game.gameStatus.status === "checkmate") {
+            if (game.gameStatus.color === "w") return "White wins by checkmate";
+            else return "Black wins by checkmate";
+        } else if (game.gameStatus.status === "stalemate") {
+            return "Stalemate, Draw!";
+        } else if (game.gameStatus.status === "threefold-repetition") {
+            return "Threefold-repetition, Draw!";
+        } else if (game.gameStatus.status === "insufficient-material") {
+            return "Insufficient Material, Draw!";
+        } else if (game.gameStatus.status === "timeout") {
+            if (game.gameStatus.color === "b")
+                return "White timed out, Black wins";
+            else return "Black timed out, White wins";
+        } else return "";
+    };
+
+    useEffect(() => {
+        if (gameId) {
+            socket.emit("get-game", gameId);
+        }
+
+        socket.on(
+            "game-update",
+            ({ game: serverGame, fen }: { game: gameType; fen: string }) => {
+                const updatedBoard = new Chess(fen);
+                setGame(serverGame);
+                setBoard(updatedBoard);
+                setGameError(null);
+                socket.emit("get-time", gameId);
+            }
+        );
+
+        socket.on("get-game-error", (msg: string) => {
+            setGameError(msg);
+        });
+
+        socket.on("make-move-error", (msg) => {
+            setGameError(msg);
+            const updatedBoard = new Chess(board.fen());
+            updatedBoard.undo();
+            setBoard(updatedBoard);
+        });
+
+        socket.on("game-over", ({ game: serverGame, fen }) => {
+            const updatedBoard = new Chess(fen);
+            setGame(serverGame);
+            setBoard(updatedBoard);
+            setGameError(null);
+        });
+
+        return () => {
+            socket.off("game-update");
+            socket.off("game-over");
+            socket.off("get-game-error");
+            socket.off("make-move-error");
+            socket.off("time-update");
+        };
+    }, [setGame, setGameError, gameId]);
+
+    return {
+        game,
+        board,
+        handlePieceDrop,
+        handleSquareClick,
+        optionSquares,
+        moveTo,
+        showPromotionDialog,
+        onPromotionPieceSelect,
+        gameError,
+        getGameStatusMsg,
+    };
 };
 
-export default ChessGame2;
+export default useGame;

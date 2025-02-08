@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { socket } from "../socket/main";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { isRegisteredState, userDetailsState } from "../store/auth";
+import { getAuthToken } from "../utils/token";
 
 const useSocket = () => {
     const userDetails = useRecoilValue(userDetailsState);
@@ -11,11 +12,10 @@ const useSocket = () => {
         if (userDetails.id) {
             socket.on("connect", () => {
                 console.log(`Connected to server with socket ID ${socket.id}`);
-                socket.emit("register-user", {
-                    userId: userDetails.isGuest
-                        ? "Guest_" + userDetails.id
-                        : userDetails.id,
-                });
+
+                const authToken = getAuthToken();
+
+                socket.emit("register-user", { authToken });
             });
 
             socket.on("registered-user", () => {

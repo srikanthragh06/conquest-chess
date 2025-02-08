@@ -7,7 +7,12 @@ import { socketEmit, socketEmitRoom } from "../utils/responseTemplates";
 export const onCreateLobby = (socket: Socket) => {
     const userId = socket2User.get(socket.id);
     if (!userId)
-        return socketEmit(socket, "error", `User not registered`, true);
+        return socketEmit(
+            socket,
+            "create-lobby-error",
+            `User not registered`,
+            true
+        );
 
     const newLobbyId = generate16CharUniqueString();
 

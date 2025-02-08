@@ -3,12 +3,14 @@ import FormButton from "../../components/FormButton";
 import { useRecoilValue } from "recoil";
 import { isLoggedInState, userDetailsState } from "../../store/auth";
 import useLobby from "../../hooks/useLobby";
+import FormError from "../../components/FormError";
 
 const LobbyPage = () => {
     const isLoggedIn = useRecoilValue(isLoggedInState);
     const userDetails = useRecoilValue(userDetailsState);
 
-    const { lobbyDetails, lobbyDetailsError } = useLobby();
+    const { lobbyDetails, lobbyDetailsError, handleStartGame, startGameError } =
+        useLobby();
 
     return (
         <MainPage
@@ -64,12 +66,25 @@ const LobbyPage = () => {
                     </div>
 
                     <div className="sm:w-96 w-5/6 h-[200px] border-2 mt-10"></div>
-                    <FormButton
-                        className="bg-gray-700 mt-4 px-10 py-1"
-                        isActive={false}
-                    >
-                        Start Game!
-                    </FormButton>
+                    <div className="mt-6 w-full flex flex-col items-center space-y-1">
+                        <FormError>{startGameError}</FormError>
+                        <FormButton
+                            className="bg-gray-700 mt-4 px-10 py-1"
+                            isActive={
+                                lobbyDetails
+                                    ? lobbyDetails.players.length === 2 &&
+                                      (userDetails.isGuest
+                                          ? lobbyDetails.hostId ===
+                                            "Guest_" + userDetails.id
+                                          : lobbyDetails.hostId ===
+                                            userDetails.id)
+                                    : false
+                            }
+                            onClick={(e) => handleStartGame(e)}
+                        >
+                            Start Game!
+                        </FormButton>
+                    </div>
                 </>
             )}
         </MainPage>
