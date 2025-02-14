@@ -2,9 +2,6 @@
 
 import { Chess } from "chess.js";
 
-export const socket2User: Map<string, string> = new Map();
-export const user2Socket: Map<string, string> = new Map();
-
 export type lobbyType = {
     lobbyId: string;
     hostId: string;
@@ -14,19 +11,16 @@ export type lobbyType = {
 
 // lobbies
 
-export const lobbies: Map<string, lobbyType> = new Map();
-export const user2Lobby: Map<string, string> = new Map();
-
-const cleanupLobbies = () => {
-    const INACTIVITY_TIMEOUT = 2 * 60 * 1000;
-    const now = Date.now();
-    for (const [lobbyId, lobby] of lobbies) {
-        if (lobby.emptySince && now - lobby.emptySince > INACTIVITY_TIMEOUT) {
-            lobbies.delete(lobbyId);
-        }
-    }
-};
-setInterval(cleanupLobbies, 60 * 1000);
+// const cleanupLobbies = () => {
+//     const INACTIVITY_TIMEOUT = 2 * 60 * 1000;
+//     const now = Date.now();
+//     for (const [lobbyId, lobby] of lobbies) {
+//         if (lobby.emptySince && now - lobby.emptySince > INACTIVITY_TIMEOUT) {
+//             lobbies.delete(lobbyId);
+//         }
+//     }
+// };
+// setInterval(cleanupLobbies, 60 * 1000);
 
 // games
 export type moveType = {
@@ -40,11 +34,12 @@ export type gameType = {
     gameId: string;
     whiteId: string;
     blackId: string;
-    board: Chess;
-    moves: moveType[];
+    fen: string;
     startTime: number;
     gameStatus: gameStatusType;
 };
+
+export type movesType = moveType[];
 
 export type gameStatusType = {
     color: "w" | "b";
@@ -60,30 +55,26 @@ export type gameStatusType = {
         | "mutual-draw";
 };
 
-export const games: Map<string, gameType> = new Map();
-export const user2Game: Map<string, string> = new Map();
-
-export const updateRemainingTime = (game: gameType) => {
+export const updateRemainingTime = (game: gameType, moves: movesType) => {
     let whiteTime = 1 * 60 * 1000;
     let blackTime = 1 * 60 * 1000;
 
-    for (let i = 0; i < game.moves.length; i += 2) {
+    for (let i = 0; i < moves.length; i += 2) {
         whiteTime -=
-            game.moves[i].time -
-            (i === 0 ? game.startTime : game.moves[i - 1].time);
+            moves[i].time - (i === 0 ? game.startTime : moves[i - 1].time);
     }
-    for (let i = 1; i < game.moves.length; i += 2) {
-        blackTime -= game.moves[i].time - game.moves[i - 1].time;
+    for (let i = 1; i < moves.length; i += 2) {
+        blackTime -= moves[i].time - moves[i - 1].time;
     }
 
-    if (game.moves.length % 2 === 0) {
+    if (moves.length % 2 === 0) {
         whiteTime -=
             Date.now() -
-            (game.moves.length === 0
+            (moves.length === 0
                 ? game.startTime
-                : game.moves[game.moves.length - 1].time);
+                : moves[moves.length - 1].time);
     } else {
-        blackTime -= Date.now() - game.moves[game.moves.length - 1].time;
+        blackTime -= Date.now() - moves[moves.length - 1].time;
     }
 
     if (whiteTime <= 0) {
@@ -98,15 +89,17 @@ export const updateRemainingTime = (game: gameType) => {
     return { whiteTime, blackTime };
 };
 
-export const updateGameEnd = (game: gameType) => {
-    if (game.board.isCheckmate()) {
-        game.gameStatus.color = game.moves.length % 2 === 1 ? "w" : "b";
+export const updateGameEnd = (game: gameType, moves: movesType) => {
+    const board = new Chess(game.fen);
+
+    if (board.isCheckmate()) {
+        game.gameStatus.color = moves.length % 2 === 1 ? "w" : "b";
         game.gameStatus.status = "checkmate";
-    } else if (game.board.isStalemate()) {
+    } else if (board.isStalemate()) {
         game.gameStatus.status = "stalemate";
-    } else if (game.board.isThreefoldRepetition()) {
+    } else if (board.isThreefoldRepetition()) {
         game.gameStatus.status = "threefold-repetition";
-    } else if (game.board.isInsufficientMaterial()) {
+    } else if (board.isInsufficientMaterial()) {
         game.gameStatus.status = "insufficient-material";
     }
     return game.gameStatus.status !== "playing";

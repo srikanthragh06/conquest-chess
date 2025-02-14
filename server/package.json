@@ -6,7 +6,9 @@
         "start": "ts-node src/main.ts",
         "build": "tsc",
         "serve": "node dist/main.js",
-        "dev": "nodemon"
+        "dev": "nodemon",
+        "dev1": "SERVER_PORT=3000 nodemon",
+        "dev2": "SERVER_PORT=3001 nodemon"
     },
     "keywords": [],
     "author": "",
@@ -21,6 +23,7 @@
         "dotenv": "^16.4.7",
         "express": "^4.21.2",
         "express-validator": "^7.2.1",
+        "ioredis": "^5.5.0",
         "jsonwebtoken": "^9.0.2",
         "pg": "^8.13.1",
         "socket.io": "^4.8.1"

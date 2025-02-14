@@ -8,13 +8,14 @@ import {
 } from "react-chessboard/dist/chessboard/types";
 import { userDetailsState } from "../store/auth";
 import { useRecoilValue } from "recoil";
-import { gameType } from "../types/game";
+import { gameType, movesType } from "../types/game";
 
 const useGame = () => {
     const { gameId } = useParams();
     const userDetails = useRecoilValue(userDetailsState);
 
     const [game, setGame] = useState<gameType | null>(null);
+    const [moves, setMoves] = useState<movesType | null>(null);
 
     const [board, setBoard] = useState(new Chess());
     const [moveFrom, setMoveFrom] = useState<Square | null>(null);
@@ -186,10 +187,10 @@ const useGame = () => {
     };
 
     const getGameStatusMsg = () => {
-        if (!game) return "";
+        if (!game || !moves) return "";
 
         if (game.gameStatus.status === "playing") {
-            if (game.moves.length % 2 === 0) return "White to play!";
+            if (moves.length % 2 === 0) return "White to play!";
             else return "Black to play!";
         } else if (game.gameStatus.status === "checkmate") {
             if (game.gameStatus.color === "w") return "White wins by checkmate";
@@ -214,9 +215,16 @@ const useGame = () => {
 
         socket.on(
             "game-update",
-            ({ game: serverGame, fen }: { game: gameType; fen: string }) => {
-                const updatedBoard = new Chess(fen);
+            ({
+                game: serverGame,
+                moves: serverMoves,
+            }: {
+                game: gameType;
+                moves: movesType;
+            }) => {
+                const updatedBoard = new Chess(serverGame.fen);
                 setGame(serverGame);
+                setMoves(serverMoves);
                 setBoard(updatedBoard);
                 setGameError(null);
                 socket.emit("get-time", gameId);
@@ -234,10 +242,11 @@ const useGame = () => {
             setBoard(updatedBoard);
         });
 
-        socket.on("game-over", ({ game: serverGame, fen }) => {
-            const updatedBoard = new Chess(fen);
+        socket.on("game-over", ({ game: serverGame, moves: serverMoves }) => {
+            const updatedBoard = new Chess(serverGame.fen);
             setGame(serverGame);
             setBoard(updatedBoard);
+            setMoves(serverMoves);
             setGameError(null);
         });
 
@@ -252,6 +261,7 @@ const useGame = () => {
 
     return {
         game,
+        moves,
         board,
         handlePieceDrop,
         handleSquareClick,

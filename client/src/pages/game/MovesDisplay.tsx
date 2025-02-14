@@ -1,6 +1,6 @@
-import { gameType, moveType } from "../../types/game";
+import { movesType, moveType } from "../../types/game";
 
-const MovesDisplay = ({ game }: { game: gameType }) => {
+const MovesDisplay = ({ moves }: { moves: movesType }) => {
     const isPawnPromotion = (move: moveType) => {
         return (
             move.promotion &&
@@ -24,7 +24,7 @@ const MovesDisplay = ({ game }: { game: gameType }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {game.moves.map((move, index) => (
+                        {moves.map((move, index) => (
                             <tr
                                 key={index}
                                 className="border-b border-gray-700"

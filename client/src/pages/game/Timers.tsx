@@ -1,8 +1,8 @@
-import { gameType } from "../../types/game";
+import { gameType, movesType } from "../../types/game";
 import useTimers from "../../hooks/useTimers";
 
-const Timers = ({ game }: { game: gameType }) => {
-    const { whiteTimeRem, blackTimeRem } = useTimers(game);
+const Timers = ({ game, moves }: { game: gameType; moves: movesType }) => {
+    const { whiteTimeRem, blackTimeRem } = useTimers(game, moves);
 
     const formatTime = (ms: number) => {
         const minutes = Math.floor(ms / 60000);

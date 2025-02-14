@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { socket } from "../socket/main";
-import { gameType } from "../types/game";
+import { gameType, movesType } from "../types/game";
 import { Timer, useTimer } from "react-use-precision-timer";
 
-const useTimers = (game: gameType) => {
+const useTimers = (game: gameType, moves: movesType) => {
     const [whiteTimeRem, setWhiteTimeRem] = useState(1 * 60 * 1000);
     const [blackTimeRem, setBlackTimeRem] = useState(1 * 60 * 1000);
 
     const [isWhitePaused, setIsWhitePaused] = useState(
-        game.gameStatus.status !== "playing" || game.moves.length % 2 === 1
+        game.gameStatus.status !== "playing" || moves.length % 2 === 1
     );
     const [isBlackPaused, setIsBlackPaused] = useState(
-        game.gameStatus.status !== "playing" || game.moves.length % 2 === 0
+        game.gameStatus.status !== "playing" || moves.length % 2 === 0
     );
 
     const [periodicUpdateSwitch, setPeriodicUpdateSwitch] = useState(true);
@@ -65,10 +65,10 @@ const useTimers = (game: gameType) => {
 
     useEffect(() => {
         setIsWhitePaused(
-            game.gameStatus.status !== "playing" || game.moves.length % 2 === 1
+            game.gameStatus.status !== "playing" || moves.length % 2 === 1
         );
         setIsBlackPaused(
-            game.gameStatus.status !== "playing" || game.moves.length % 2 === 0
+            game.gameStatus.status !== "playing" || moves.length % 2 === 0
         );
 
         if (

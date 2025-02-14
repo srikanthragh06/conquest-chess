@@ -14,6 +14,7 @@ import authRouter from "./routers/auth";
 import userRouter from "./routers/user";
 import { handleIOConnection } from "./sockets/main";
 import { app, io, server } from "./server";
+import { testRedisConnection } from "./redis/client";
 
 io.on("connection", handleIOConnection);
 
@@ -40,4 +41,5 @@ const PORT = process.env.SERVER_PORT;
 server.listen(PORT, () => {
     consoleLogCyan(`Server is running on localhost: ${PORT}`);
     testDatabaseConnection();
+    testRedisConnection();
 });

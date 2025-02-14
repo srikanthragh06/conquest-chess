@@ -1,96 +1,166 @@
 import { Socket } from "socket.io";
-import { lobbies, socket2User, user2Lobby } from "../state/state";
+import { lobbyType } from "../state/state";
 import { generate16CharUniqueString } from "../utils/utils";
-import { io } from "../server";
-import { socketEmit, socketEmitRoom } from "../utils/responseTemplates";
+import { socketEmit } from "../utils/responseTemplates";
+import { redisClient } from "../redis/client";
 
-export const onCreateLobby = (socket: Socket) => {
-    const userId = socket2User.get(socket.id);
-    if (!userId)
-        return socketEmit(
-            socket,
-            "create-lobby-error",
-            `User not registered`,
-            true
-        );
+export const onCreateLobby = async (socket: Socket) => {
+    try {
+        await redisClient.watch(`socketId:${socket.id}:userId`);
+        const userId = await redisClient.get(`socketId:${socket.id}:userId`);
+        if (!userId)
+            return socketEmit(
+                socket,
+                "create-lobby-error",
+                "User not registered",
+                true
+            );
 
-    const newLobbyId = generate16CharUniqueString();
+        const newLobbyId = generate16CharUniqueString();
 
-    const oldLobbyId = user2Lobby.get(userId);
-    if (oldLobbyId) {
-        user2Lobby.delete(userId);
-        const oldLobby = lobbies.get(oldLobbyId);
-        if (oldLobby) {
-            if (oldLobby.players.includes(userId)) {
-                oldLobby.players = oldLobby.players.filter(
-                    (playerId) => playerId !== userId
-                );
-                socket.leave(oldLobbyId);
+        await redisClient.watch(`userId:${userId}:lobbyId`);
 
-                if (oldLobby.players.length === 0) {
-                    oldLobby.emptySince = Date.now();
-                } else {
-                    if (oldLobby.hostId === userId) {
+        const tx = redisClient.multi();
+
+        const oldLobbyId = await redisClient.get(`userId:${userId}:lobbyId`);
+
+        if (oldLobbyId) {
+            tx.del(`userId:${userId}:lobbyId`);
+
+            await redisClient.watch(`lobbyId:${oldLobbyId}:lobby`);
+
+            const oldLobbyJSON = await redisClient.get(
+                `lobbyId:${oldLobbyId}:lobby`
+            );
+            if (oldLobbyJSON) {
+                const oldLobby: lobbyType = JSON.parse(oldLobbyJSON);
+
+                if (oldLobby.players.includes(userId)) {
+                    oldLobby.players = oldLobby.players.filter(
+                        (playerId: string) => playerId !== userId
+                    );
+                    socket.leave(oldLobbyId);
+
+                    if (oldLobby.players.length === 0) {
+                        oldLobby.emptySince = Date.now();
+                    } else if (oldLobby.hostId === userId) {
                         oldLobby.hostId = oldLobby.players[0];
                     }
+
+                    tx.set(
+                        `lobbyId:${oldLobbyId}:lobby`,
+                        JSON.stringify(oldLobby)
+                    );
                 }
             }
         }
+
+        const newLobby: lobbyType = {
+            lobbyId: newLobbyId,
+            hostId: userId,
+            players: [userId],
+            emptySince: null,
+        };
+
+        tx.set(`lobbyId:${newLobbyId}:lobby`, JSON.stringify(newLobby));
+        tx.set(`userId:${userId}:lobbyId`, newLobbyId);
+
+        const result = await tx.exec();
+        if (!result)
+            return socketEmit(
+                socket,
+                "create-lobby-error",
+                "Failed to create lobby due to a conflict. Please try again.",
+                true
+            );
+        socket.join(newLobbyId);
+
+        socketEmit(socket, "created-lobby", newLobbyId);
+
+        redisClient.publish(
+            `lobby-update:${newLobbyId}`,
+            JSON.stringify(newLobby)
+        );
+    } catch (err) {
+        socketEmit(
+            socket,
+            "create-lobby-error",
+            "Failed to create lobby",
+            true
+        );
+        console.error("Error during lobby creation:", err);
+    } finally {
+        await redisClient.unwatch();
     }
-
-    lobbies.set(newLobbyId, {
-        lobbyId: newLobbyId,
-        hostId: userId,
-        players: [userId],
-        emptySince: null,
-    });
-    user2Lobby.set(userId, newLobbyId);
-    socket.join(newLobbyId);
-
-    socketEmit(socket, "created-lobby", newLobbyId);
-    io.to(newLobbyId).emit("lobby-details", lobbies.get(newLobbyId));
 };
 
-export const onJoinLobby = (socket: Socket, lobbyId: string) => {
-    const userId = socket2User.get(socket.id);
-    if (!userId)
-        return socketEmit(
-            socket,
-            "lobby-details-error",
-            `User not registered`,
-            true
+export const onJoinLobby = async (socket: Socket, lobbyId: string) => {
+    try {
+        await redisClient.watch(`socketId:${socket.id}:userId`);
+        const userId = await redisClient.get(`socketId:${socket.id}:userId`);
+        if (!userId)
+            return socketEmit(
+                socket,
+                "lobby-details-error",
+                "User not registered",
+                true
+            );
+
+        await redisClient.watch(
+            `lobbyId:${lobbyId}:lobby`,
+            `userId:${userId}:lobbyId`
         );
 
-    const lobby = lobbies.get(lobbyId);
-    if (!lobby)
-        return socketEmit(
-            socket,
-            "lobby-details-error",
-            `Lobby with lobby ID ${lobbyId} does not exist`,
-            true
-        );
+        const tx = redisClient.multi();
 
-    if (lobby.players.includes(userId)) {
+        const lobbyJSON = await redisClient.get(`lobbyId:${lobbyId}:lobby`);
+        if (!lobbyJSON)
+            return socketEmit(
+                socket,
+                "lobby-details-error",
+                `Lobby with ID ${lobbyId} does not exist`,
+                true
+            );
+
+        const lobby: lobbyType = JSON.parse(lobbyJSON);
+        if (lobby.players.includes(userId)) {
+            socketEmit(socket, "joined-lobby");
+            socketEmit(socket, "lobby-details", lobby);
+            return;
+        }
+
+        if (lobby.players.length >= 2)
+            return socketEmit(
+                socket,
+                "lobby-details-error",
+                "Lobby already has 2 players",
+                true
+            );
+
+        lobby.players.push(userId);
+        if (lobby.players.length === 1) {
+            lobby.hostId = userId;
+            lobby.emptySince = null;
+        }
+
+        tx.set(`lobbyId:${lobbyId}:lobby`, JSON.stringify(lobby));
+        tx.set(`userId:${userId}:lobbyId`, lobbyId);
+
+        const result = await tx.exec();
+        if (!result)
+            return socketEmit(
+                socket,
+                "join-lobby-error",
+                "Failed to join lobby due to conflict",
+                true
+            );
+        socket.join(lobbyId);
         socketEmit(socket, "joined-lobby");
-        socketEmit(socket, "lobby-details", lobby);
-        return;
+        redisClient.publish(`lobby-update:${lobbyId}`, JSON.stringify(lobby));
+    } catch (err) {
+        socketEmit(socket, "join-lobby-error", "Failed to join lobby", true);
+        console.error("Error during joining lobby:", err);
+    } finally {
+        await redisClient.unwatch();
     }
-
-    if (lobby.players.length === 2)
-        return socketEmit(
-            socket,
-            "lobby-details-error",
-            `Lobby already has 2 players`,
-            true
-        );
-
-    lobby.players.push(userId);
-    if (lobby.players.length === 1) {
-        lobby.hostId = userId;
-        lobby.emptySince = null;
-    }
-    user2Lobby.set(userId, lobbyId);
-    socket.join(lobbyId);
-    socketEmit(socket, "joined-lobby");
-    socketEmitRoom(io, lobbyId, "lobby-details", lobby);
 };

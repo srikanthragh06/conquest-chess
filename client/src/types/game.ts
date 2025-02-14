@@ -1,5 +1,3 @@
-import { Chess } from "chess.js";
-
 export type moveType = {
     from: string;
     to: string;
@@ -11,11 +9,12 @@ export type gameType = {
     gameId: string;
     whiteId: string;
     blackId: string;
-    board: Chess;
-    moves: moveType[];
+    fen: string;
     startTime: number;
     gameStatus: gameStatusType;
 };
+
+export type movesType = moveType[];
 
 export type gameStatusType = {
     color: "w" | "b";

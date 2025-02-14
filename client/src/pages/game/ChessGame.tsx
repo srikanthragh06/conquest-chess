@@ -9,6 +9,7 @@ import Timers from "./Timers";
 const ChessGame = () => {
     const {
         board,
+        moves,
         game,
         handlePieceDrop,
         handleSquareClick,
@@ -51,9 +52,9 @@ const ChessGame = () => {
                     showPromotionDialog={showPromotionDialog}
                     onPromotionPieceSelect={onPromotionPieceSelect}
                 />
-                {game && <Timers game={game} />}
+                {game && moves && <Timers game={game} moves={moves} />}
             </div>
-            {game && <MovesDisplay game={game} />}
+            {moves && <MovesDisplay moves={moves} />}
         </div>
     );
 };

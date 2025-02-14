@@ -1,7 +1,6 @@
 import { Socket } from "socket.io";
 import { onRegisterUser } from "./user";
 import { onCreateLobby, onJoinLobby } from "./lobby";
-import { io } from "../server";
 import { logSocketOn } from "../utils/logging";
 import {
     onGetGame,
@@ -22,9 +21,7 @@ export const handleIOConnection = (socket: Socket) => {
     socket.on("create-lobby", () => onCreateLobby(socket));
     socket.on("join-lobby", (lobbyId: string) => onJoinLobby(socket, lobbyId));
 
-    socket.on("start-game", (lobbyId: string) =>
-        onStartGame(io, socket, lobbyId)
-    );
+    socket.on("start-game", (lobbyId: string) => onStartGame(socket, lobbyId));
     socket.on("get-game", (gameId: string) => onGetGame(socket, gameId));
     socket.on(
         "make-move",
@@ -34,11 +31,9 @@ export const handleIOConnection = (socket: Socket) => {
         }: {
             gameId: string;
             move: { from: string; to: string; promotion?: string };
-        }) => onMakeMove(io, socket, gameId, move)
+        }) => onMakeMove(socket, gameId, move)
     );
-
     socket.on("get-time", (gameId: string) => onGetTime(socket, gameId));
-
     socket.on("timeout", (gameId: string) => onTimeout(socket, gameId));
 
     socket.on("disconnect", () => onDisconnect(socket));
