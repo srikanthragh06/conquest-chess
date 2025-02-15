@@ -19,6 +19,7 @@ export const redisSubscriber = new Redis({
 });
 
 redisSubscriber.psubscribe("lobby-update:*");
+redisSubscriber.psubscribe("match-select:*");
 redisSubscriber.psubscribe("started-game:*");
 redisSubscriber.psubscribe("game-update:*");
 redisSubscriber.psubscribe("game-over:*");

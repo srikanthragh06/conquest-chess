@@ -32,6 +32,7 @@ export type moveType = {
 
 export type gameType = {
     gameId: string;
+    type: "Blitz" | "Rapid" | "Bullet";
     whiteId: string;
     blackId: string;
     fen: string;
@@ -64,8 +65,18 @@ export type gameStatusType = {
 };
 
 export const updateRemainingTime = (game: gameType, moves: movesType) => {
-    let whiteTime = 1 * 60 * 1000;
-    let blackTime = 1 * 60 * 1000;
+    let whiteTime =
+        game.type === "Rapid"
+            ? 10 * 60 * 1000
+            : game.type === "Blitz"
+            ? 3 * 60 * 1000
+            : 1 * 60 * 1000;
+    let blackTime =
+        game.type === "Rapid"
+            ? 10 * 60 * 1000
+            : game.type === "Blitz"
+            ? 3 * 60 * 1000
+            : 1 * 60 * 1000;
 
     for (let i = 0; i < moves.length; i += 2) {
         whiteTime -=

@@ -6,13 +6,16 @@ import {
     updateGameEnd,
     updateRemainingTime,
 } from "../state/state";
-import { socketEmit, socketEmitRoom } from "../utils/responseTemplates";
+import { socketEmit } from "../utils/responseTemplates";
 import { generate16CharUniqueString } from "../utils/utils";
 import { Chess } from "chess.js";
 import { redisClient } from "../redis/client";
-import { text } from "body-parser";
 
-export const onStartGame = async (socket: Socket, lobbyId: string) => {
+export const onStartGame = async (
+    socket: Socket,
+    lobbyId: string,
+    matchType: string
+) => {
     try {
         await redisClient.watch(
             `socketId:${socket.id}:userId`,
@@ -63,6 +66,7 @@ export const onStartGame = async (socket: Socket, lobbyId: string) => {
 
         const newGame: gameType = {
             gameId: newGameId,
+            type: matchType as "Blitz" | "Rapid" | "Bullet",
             whiteId,
             blackId,
             fen: new Chess().fen(),

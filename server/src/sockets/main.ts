@@ -1,6 +1,6 @@
 import { Socket } from "socket.io";
 import { onRegisterUser } from "./user";
-import { onCreateLobby, onJoinLobby } from "./lobby";
+import { onCreateLobby, onJoinLobby, onMatchSelect } from "./lobby";
 import { logSocketOn } from "../utils/logging";
 import {
     onAcceptDraw,
@@ -24,8 +24,22 @@ export const handleIOConnection = (socket: Socket) => {
 
     socket.on("create-lobby", () => onCreateLobby(socket));
     socket.on("join-lobby", (lobbyId: string) => onJoinLobby(socket, lobbyId));
+    socket.on(
+        "match-select",
+        ({
+            lobbyId,
+            matchType,
+        }: {
+            lobbyId: string;
+            matchType: "BLitz" | "Rapid" | "Bullet";
+        }) => onMatchSelect(socket, lobbyId, matchType)
+    );
 
-    socket.on("start-game", (lobbyId: string) => onStartGame(socket, lobbyId));
+    socket.on(
+        "start-game",
+        ({ lobbyId, matchType }: { lobbyId: string; matchType: string }) =>
+            onStartGame(socket, lobbyId, matchType)
+    );
     socket.on("get-game", (gameId: string) => onGetGame(socket, gameId));
     socket.on(
         "make-move",

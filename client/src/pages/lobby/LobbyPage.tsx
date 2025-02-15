@@ -9,8 +9,14 @@ const LobbyPage = () => {
     const isLoggedIn = useRecoilValue(isLoggedInState);
     const userDetails = useRecoilValue(userDetailsState);
 
-    const { lobbyDetails, lobbyDetailsError, handleStartGame, startGameError } =
-        useLobby();
+    const {
+        lobbyDetails,
+        lobbyDetailsError,
+        handleStartGame,
+        startGameError,
+        matchType,
+        handleMatchTypeSelect,
+    } = useLobby();
 
     return (
         <MainPage
@@ -65,36 +71,47 @@ const LobbyPage = () => {
                         </ul>
                     </div>
 
-                    <div className="sm:w-96 w-5/6 h-[200px] border-2 mt-10">
-                        <label>
-                            <input
-                                type="radio"
-                                name="matchType"
-                                value="blitz"
-                            />{" "}
-                            Blitz
-                        </label>
-                        <label>
-                            <input
-                                type="radio"
-                                name="matchType"
-                                value="rapid"
-                            />{" "}
-                            Rapid
-                        </label>
-                        <label>
-                            <input
-                                type="radio"
-                                name="matchType"
-                                value="bullet"
-                            />{" "}
-                            Bullet
-                        </label>
+                    <div className="flex sm:w-96 w-5/6 space-x-2 mt-3 justify-evenly">
+                        {["Rapid", "Blitz", "Bullet"].map((type) => {
+                            return (
+                                <label
+                                    key={type}
+                                    className={`text-base px-2 py-1 rounded-lg transition 
+                                                bg-gray-700 ${
+                                                    (userDetails.isGuest
+                                                        ? lobbyDetails.hostId ===
+                                                          "Guest_" +
+                                                              userDetails.id
+                                                        : lobbyDetails.hostId ===
+                                                          userDetails.id) &&
+                                                    "cursor-pointer"
+                                                }
+                                    ${
+                                        matchType === type
+                                            ? " hover:opacity-80 active:opacity-60"
+                                            : "opacity-30"
+                                    }
+                                  `}
+                                    onClick={() =>
+                                        handleMatchTypeSelect(
+                                            type as "Blitz" | "Rapid" | "Bullet"
+                                        )
+                                    }
+                                >
+                                    {type}{" "}
+                                    {type === "Rapid"
+                                        ? " (10 min)"
+                                        : type === "Blitz"
+                                        ? " (3 min)"
+                                        : " (60 sec)"}
+                                </label>
+                            );
+                        })}
                     </div>
                     <div className="mt-6 w-full flex flex-col items-center space-y-1">
                         <FormError>{startGameError}</FormError>
                         <FormButton
-                            className="bg-gray-700 mt-4 px-10 py-1"
+                            className="bg-gray-700 mt-8 px-10 py-1"
                             isActive={
                                 lobbyDetails
                                     ? lobbyDetails.players.length === 2 &&

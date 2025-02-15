@@ -16,6 +16,13 @@ export const onSubscribePMessage = async (
 
             socketEmitRoom(io, lobbyId, "lobby-details", lobby);
         }
+        // match-select
+        else if (channel.startsWith("match-select")) {
+            const lobbyId = channel.split(":")[1];
+            const matchType = message;
+            console.log(matchType);
+            socketEmitRoom(io, lobbyId, "match-select", matchType);
+        }
         // started-game
         else if (channel.startsWith("started-game")) {
             const { gameId, lobbyId, whiteSocketId, blackSocketId } =

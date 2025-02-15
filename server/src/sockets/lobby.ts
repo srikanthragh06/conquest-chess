@@ -164,3 +164,43 @@ export const onJoinLobby = async (socket: Socket, lobbyId: string) => {
         await redisClient.unwatch();
     }
 };
+
+export const onMatchSelect = async (
+    socket: Socket,
+    lobbyId: string,
+    matchType: "BLitz" | "Rapid" | "Bullet"
+) => {
+    try {
+        await redisClient.watch(`socketId:${socket.id}:userId`);
+        const userId = await redisClient.get(`socketId:${socket.id}:userId`);
+        if (!userId)
+            return socketEmit(
+                socket,
+                "match-select-error",
+                "User not registered",
+                true
+            );
+
+        await redisClient.watch(`lobbyId:${lobbyId}:lobby`);
+
+        const lobbyJSON = await redisClient.get(`lobbyId:${lobbyId}:lobby`);
+        if (!lobbyJSON)
+            return socketEmit(
+                socket,
+                "match-select-error",
+                `Lobby with ID ${lobbyId} does not exist`,
+                true
+            );
+        redisClient.publish(`match-select:${lobbyId}`, matchType);
+    } catch (err) {
+        socketEmit(
+            socket,
+            "match-select-error",
+            "Failed to emit match type select",
+            true
+        );
+        console.error("Error during match-select:", err);
+    } finally {
+        await redisClient.unwatch();
+    }
+};

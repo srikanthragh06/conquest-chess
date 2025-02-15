@@ -4,8 +4,24 @@ import { gameType, movesType } from "../types/game";
 import { Timer, useTimer } from "react-use-precision-timer";
 
 const useTimers = (game: gameType, moves: movesType) => {
-    const [whiteTimeRem, setWhiteTimeRem] = useState(1 * 60 * 1000);
-    const [blackTimeRem, setBlackTimeRem] = useState(1 * 60 * 1000);
+    const [whiteTimeRem, setWhiteTimeRem] = useState(
+        game
+            ? game.type === "Rapid"
+                ? 10 * 60 * 1000
+                : game.type === "Blitz"
+                ? 3 * 60 * 1000
+                : 1 * 60 * 1000
+            : 1 * 60 * 1000
+    );
+    const [blackTimeRem, setBlackTimeRem] = useState(
+        game
+            ? game.type === "Rapid"
+                ? 10 * 60 * 1000
+                : game.type === "Blitz"
+                ? 3 * 60 * 1000
+                : 1 * 60 * 1000
+            : 1 * 60 * 1000
+    );
 
     const [isWhitePaused, setIsWhitePaused] = useState(
         game.gameStatus.status !== "playing" || moves.length % 2 === 1

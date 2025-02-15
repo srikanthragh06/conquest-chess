@@ -7,6 +7,7 @@ export type moveType = {
 
 export type gameType = {
     gameId: string;
+    type: "Blitz" | "Rapid" | "Bullet";
     whiteId: string;
     blackId: string;
     fen: string;
