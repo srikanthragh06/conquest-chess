@@ -10,6 +10,7 @@ import { socketEmit, socketEmitRoom } from "../utils/responseTemplates";
 import { generate16CharUniqueString } from "../utils/utils";
 import { Chess } from "chess.js";
 import { redisClient } from "../redis/client";
+import { text } from "body-parser";
 
 export const onStartGame = async (socket: Socket, lobbyId: string) => {
     try {
@@ -67,6 +68,14 @@ export const onStartGame = async (socket: Socket, lobbyId: string) => {
             fen: new Chess().fen(),
             startTime: Date.now(),
             gameStatus: { color: "w", status: "playing" },
+            drawRejects: {
+                w: 0,
+                b: 0,
+            },
+            drawRequested: {
+                w: false,
+                b: false,
+            },
         };
 
         await redisClient.watch(
@@ -361,7 +370,7 @@ export const onTimeout = async (socket: Socket, gameId: string) => {
                 true
             );
 
-        const game = JSON.parse(gameJSON);
+        const game: gameType = JSON.parse(gameJSON);
 
         const movesRaw = await redisClient.lrange(
             `gameId:${gameId}:moves`,
@@ -399,6 +408,353 @@ export const onTimeout = async (socket: Socket, gameId: string) => {
     } catch (err) {
         console.error(err);
         socketEmit(socket, "timeout-error", "Failed to time out game", true);
+    } finally {
+        await redisClient.unwatch();
+    }
+};
+
+export const onResign = async (socket: Socket, gameId: string) => {
+    try {
+        await redisClient.watch(
+            `socketId:${socket.id}:userId`,
+            `gameId:${gameId}:game`,
+            `gameId:${gameId}:moves`
+        );
+        const userId = await redisClient.get(`socketId:${socket.id}:userId`);
+        if (!userId)
+            return socketEmit(
+                socket,
+                "resign-error",
+                `User with socketID ${socket.id} not registered`,
+                true
+            );
+
+        const gameJSON = await redisClient.get(`gameId:${gameId}:game`);
+        if (!gameJSON)
+            return socketEmit(
+                socket,
+                "resign-error",
+                `Game with gameId ${gameId} not found`,
+                true
+            );
+
+        const game: gameType = JSON.parse(gameJSON);
+        if (game.gameStatus.status !== "playing")
+            return socketEmit(
+                socket,
+                "resign-error",
+                "Game has already ended",
+                true
+            );
+
+        const movesRaw = await redisClient.lrange(
+            `gameId:${gameId}:moves`,
+            0,
+            -1
+        );
+        const moves: movesType = movesRaw.map((move) => JSON.parse(move));
+
+        const isPlayer = game.whiteId === userId || game.blackId === userId;
+        if (!isPlayer)
+            return socketEmit(
+                socket,
+                "resign-error",
+                "Only a player of the game can resign",
+                true
+            );
+
+        if (game.whiteId === userId) {
+            game.gameStatus.color = "b";
+            game.gameStatus.status = "resignation";
+        } else {
+            game.gameStatus.color = "w";
+            game.gameStatus.status = "resignation";
+        }
+
+        await redisClient.watch(
+            `userId:${game.whiteId}:gameId`,
+            `userId:${game.blackId}:gameId`
+        );
+
+        const tx = redisClient.multi();
+        tx.del(`userId:${game.whiteId}:gameId`);
+        tx.del(`userId:${game.blackId}:gameId`);
+        tx.del(`gameId:${gameId}:game`);
+        tx.del(`gameId:${gameId}:moves`);
+
+        const result = await tx.exec();
+        if (!result)
+            return socketEmit(
+                socket,
+                "resign-error",
+                "Failed to resign game due to conflict",
+                true
+            );
+
+        return redisClient.publish(
+            `game-over:${gameId}`,
+            JSON.stringify({ game, moves })
+        );
+    } catch (err) {
+        socketEmit(socket, "resign-error", "Failed to resign game", true);
+        console.error(err);
+    } finally {
+        await redisClient.unwatch();
+    }
+};
+
+export const onRequestDraw = async (socket: Socket, gameId: string) => {
+    try {
+        await redisClient.watch(
+            `socketId:${socket.id}:userId`,
+            `gameId:${gameId}:game`
+        );
+        const userId = await redisClient.get(`socketId:${socket.id}:userId`);
+        if (!userId)
+            return socketEmit(
+                socket,
+                "request-draw-error",
+                `User with socketID ${socket.id} not registered`,
+                true
+            );
+
+        const gameJSON = await redisClient.get(`gameId:${gameId}:game`);
+        if (!gameJSON)
+            return socketEmit(
+                socket,
+                "request-draw-error",
+                `Game with gameId ${gameId} not found`,
+                true
+            );
+
+        const game: gameType = JSON.parse(gameJSON);
+        if (game.gameStatus.status !== "playing")
+            return socketEmit(
+                socket,
+                "request-draw-error",
+                "Game has already ended",
+                true
+            );
+
+        const isPlayer = game.whiteId === userId || game.blackId === userId;
+        if (!isPlayer)
+            return socketEmit(
+                socket,
+                "request-draw-error",
+                "Only a player of the game can request draw",
+                true
+            );
+
+        if (
+            (game.whiteId === userId && game.drawRejects.w >= 3) ||
+            (game.blackId === userId && game.drawRejects.b >= 3)
+        )
+            return socketEmit(
+                socket,
+                "request-draw-error",
+                "Too many draw requests",
+                true
+            );
+
+        if (game.whiteId === userId) game.drawRequested.w = true;
+        if (game.blackId === userId) game.drawRequested.b = true;
+
+        const tx = redisClient.multi();
+        tx.set(`gameId:${gameId}:game`, JSON.stringify(game));
+
+        const result = await tx.exec();
+
+        if (!result)
+            return socketEmit(
+                socket,
+                "request-draw-error",
+                "Failed to request draw due to conflict",
+                true
+            );
+        if (game.whiteId === userId)
+            return redisClient.publish(`request-draw:${gameId}`, game.blackId);
+        else return redisClient.publish(`request-draw:${gameId}`, game.whiteId);
+    } catch (err) {
+        socketEmit(
+            socket,
+            "request-draw-error",
+            "Failed to request draw",
+            true
+        );
+        console.error(err);
+    } finally {
+        await redisClient.unwatch();
+    }
+};
+
+export const onAcceptDraw = async (socket: Socket, gameId: string) => {
+    try {
+        await redisClient.watch(
+            `socketId:${socket.id}:userId`,
+            `gameId:${gameId}:game`,
+            `gameId:${gameId}:moves`
+        );
+        const userId = await redisClient.get(`socketId:${socket.id}:userId`);
+        if (!userId)
+            return socketEmit(
+                socket,
+                "accept-draw-error",
+                `User with socketID ${socket.id} not registered`,
+                true
+            );
+
+        const gameJSON = await redisClient.get(`gameId:${gameId}:game`);
+        if (!gameJSON)
+            return socketEmit(
+                socket,
+                "accept-draw-error",
+                `Game with gameId ${gameId} not found`,
+                true
+            );
+
+        const game: gameType = JSON.parse(gameJSON);
+        if (game.gameStatus.status !== "playing")
+            return socketEmit(
+                socket,
+                "accept-draw-error",
+                "Game has already ended",
+                true
+            );
+
+        const movesRaw = await redisClient.lrange(
+            `gameId:${gameId}:moves`,
+            0,
+            -1
+        );
+        const moves: movesType = movesRaw.map((move) => JSON.parse(move));
+
+        const isPlayer = game.whiteId === userId || game.blackId === userId;
+        if (!isPlayer)
+            return socketEmit(
+                socket,
+                "accept-draw-error",
+                "Only a player of the game can resign",
+                true
+            );
+
+        if (
+            !(
+                (game.whiteId === userId && game.drawRequested.b === true) ||
+                (game.blackId === userId && game.drawRequested.w === true)
+            )
+        )
+            return socketEmit(
+                socket,
+                "accept-draw-error",
+                "No draw request made",
+                true
+            );
+
+        game.gameStatus.status = "mutual-draw";
+        const tx = redisClient.multi();
+        tx.del(`userId:${game.whiteId}:gameId`);
+        tx.del(`userId:${game.blackId}:gameId`);
+        tx.del(`gameId:${gameId}:game`);
+        tx.del(`gameId:${gameId}:moves`);
+
+        const result = await tx.exec();
+        if (!result)
+            return socketEmit(
+                socket,
+                "accept-draw-error",
+                "Failed to accept draw due to conflict",
+                true
+            );
+
+        return redisClient.publish(
+            `game-over:${gameId}`,
+            JSON.stringify({ game, moves })
+        );
+    } catch (err) {
+        socketEmit(socket, "accept-draw-error", "Failed to accept draw", true);
+        console.error(err);
+    } finally {
+        await redisClient.unwatch();
+    }
+};
+
+export const onRejectDraw = async (socket: Socket, gameId: string) => {
+    try {
+        await redisClient.watch(
+            `socketId:${socket.id}:userId`,
+            `gameId:${gameId}:game`
+        );
+        const userId = await redisClient.get(`socketId:${socket.id}:userId`);
+        if (!userId)
+            return socketEmit(
+                socket,
+                "reject-draw-error",
+                `User with socketID ${socket.id} not registered`,
+                true
+            );
+
+        const gameJSON = await redisClient.get(`gameId:${gameId}:game`);
+        if (!gameJSON)
+            return socketEmit(
+                socket,
+                "reject-draw-error",
+                `Game with gameId ${gameId} not found`,
+                true
+            );
+
+        const game: gameType = JSON.parse(gameJSON);
+        if (game.gameStatus.status !== "playing")
+            return socketEmit(
+                socket,
+                "reject-draw-error",
+                "Game has already ended",
+                true
+            );
+
+        const isPlayer = game.whiteId === userId || game.blackId === userId;
+        if (!isPlayer)
+            return socketEmit(
+                socket,
+                "reject-draw-error",
+                "Only a player of the game can resign",
+                true
+            );
+
+        if (
+            !(
+                (game.whiteId === userId && game.drawRequested.b === true) ||
+                (game.blackId === userId && game.drawRequested.w === true)
+            )
+        )
+            return socketEmit(
+                socket,
+                "reject-draw-error",
+                "No draw request made",
+                true
+            );
+
+        if (game.whiteId === userId && game.drawRequested.b) {
+            game.drawRejects.b += 1;
+            game.drawRequested.b = false;
+        } else if (game.blackId === userId && game.drawRequested.w) {
+            game.drawRejects.w += 1;
+            game.drawRequested.w = false;
+        }
+
+        const tx = redisClient.multi();
+        tx.set(`gameId:${gameId}:game`, JSON.stringify(game));
+
+        const result = await tx.exec();
+        if (!result)
+            return socketEmit(
+                socket,
+                "reject-draw-error",
+                "Failed to accept draw due to conflict",
+                true
+            );
+    } catch (err) {
+        socketEmit(socket, "reject-draw-error", "Failed to reject draw", true);
+        console.error(err);
     } finally {
         await redisClient.unwatch();
     }

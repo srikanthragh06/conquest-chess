@@ -1,8 +1,9 @@
 import { io } from "../server";
 import { gameType, lobbyType, movesType } from "../state/state";
 import { socketEmitRoom } from "../utils/responseTemplates";
+import { redisClient } from "./client";
 
-export const onSubscribePMessage = (
+export const onSubscribePMessage = async (
     pattern: string,
     channel: string,
     message: string
@@ -54,6 +55,18 @@ export const onSubscribePMessage = (
                 game,
                 moves,
             });
+        }
+        // request-draw
+        else if (channel.startsWith("request-draw")) {
+            const gameId = channel.split(":")[1];
+            const userId = message;
+            const socketId = await redisClient.get(`userId:${userId}:socketId`);
+            if (socketId) {
+                const socket = io.sockets.sockets.get(socketId);
+                if (socket) {
+                    socket.emit("request-draw", gameId);
+                }
+            }
         }
     } catch (err) {
         console.error(err);

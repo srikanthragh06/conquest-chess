@@ -12,6 +12,14 @@ export type gameType = {
     fen: string;
     startTime: number;
     gameStatus: gameStatusType;
+    drawRejects: {
+        w: number;
+        b: number;
+    };
+    drawRequested: {
+        w: boolean;
+        b: boolean;
+    };
 };
 
 export type movesType = moveType[];

@@ -5,6 +5,7 @@ import { userDetailsState } from "../../store/auth";
 import FormError from "../../components/FormError";
 import { Chessboard } from "react-chessboard";
 import Timers from "./Timers";
+import FormButton from "../../components/FormButton";
 
 const ChessGame = () => {
     const {
@@ -19,6 +20,11 @@ const ChessGame = () => {
         onPromotionPieceSelect,
         gameError,
         getGameStatusMsg,
+        handleResign,
+        handleRequestDraw,
+        drawRequest,
+        handleAcceptDraw,
+        handleRejectDraw,
     } = useGame();
 
     const userDetails = useRecoilValue(userDetailsState);
@@ -26,6 +32,50 @@ const ChessGame = () => {
     return (
         <div className="w-2/3 flex space-x-4 justify-center border-">
             <div className="w-1/2  flex flex-col items-center space-y-3">
+                <div className="h-[4px]" />
+                {game && drawRequest && (
+                    <div
+                        className="flex flex-col w-full justify-evenly 
+                                text-base items-center bg-gray-900 rounded-lg
+                                py-3 space-y-2
+                    "
+                    >
+                        <p>Your oppernent is suggesting a draw!</p>
+                        <div className="flex w-full justify-evenly">
+                            <FormButton
+                                onClick={handleAcceptDraw}
+                                className="bg-gray-800 text-base"
+                            >
+                                Accept
+                            </FormButton>
+                            <FormButton
+                                onClick={handleRejectDraw}
+                                className="bg-gray-800 text-base"
+                            >
+                                Reject
+                            </FormButton>
+                        </div>
+                    </div>
+                )}
+                {game && game.gameStatus.status === "playing" && (
+                    <div
+                        className="flex w-full justify-evenly
+                "
+                    >
+                        <FormButton
+                            className="text-white bg-gray-800 px-7 text-sm mt-3"
+                            onClick={handleResign}
+                        >
+                            Resign
+                        </FormButton>
+                        <FormButton
+                            className="text-white bg-gray-800 px-7 text-sm mt-3"
+                            onClick={handleRequestDraw}
+                        >
+                            Draw
+                        </FormButton>
+                    </div>
+                )}
                 <p>{getGameStatusMsg()}</p>
                 <FormError className="text-lg">{gameError}</FormError>
                 <Chessboard

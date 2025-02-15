@@ -27,6 +27,8 @@ const useGame = () => {
     const [isWhiteTurn, setIsWhiteTurn] = useState(true);
     const [gameError, setGameError] = useState<string | null>(null);
 
+    const [drawRequest, setDrawRequest] = useState(false);
+
     const isValidTurn = () => {
         const userId = userDetails.isGuest
             ? `Guest_${userDetails.id}`
@@ -205,7 +207,31 @@ const useGame = () => {
             if (game.gameStatus.color === "b")
                 return "White timed out, Black wins";
             else return "Black timed out, White wins";
+        } else if (game.gameStatus.status === "resignation") {
+            if (game.gameStatus.color === "b")
+                return "White resigns, Black wins";
+            else return "Black resigns, White wins";
+        } else if (game.gameStatus.status === "mutual-draw") {
+            return "Mutual Draw";
         } else return "";
+    };
+
+    const handleResign = () => {
+        socket.emit("resign", gameId);
+    };
+
+    const handleRequestDraw = () => {
+        socket.emit("request-draw", gameId);
+    };
+
+    const handleAcceptDraw = () => {
+        setDrawRequest(false);
+        socket.emit("accept-draw", gameId);
+    };
+
+    const handleRejectDraw = () => {
+        setDrawRequest(false);
+        socket.emit("reject-draw", gameId);
     };
 
     useEffect(() => {
@@ -250,12 +276,17 @@ const useGame = () => {
             setGameError(null);
         });
 
+        socket.on("request-draw", () => {
+            setDrawRequest(true);
+        });
+
         return () => {
             socket.off("game-update");
             socket.off("game-over");
             socket.off("get-game-error");
             socket.off("make-move-error");
             socket.off("time-update");
+            socket.off("request-draw");
         };
     }, [setGame, setGameError, gameId]);
 
@@ -271,6 +302,11 @@ const useGame = () => {
         onPromotionPieceSelect,
         gameError,
         getGameStatusMsg,
+        handleResign,
+        handleRequestDraw,
+        drawRequest,
+        handleAcceptDraw,
+        handleRejectDraw,
     };
 };
 

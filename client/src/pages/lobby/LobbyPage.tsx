@@ -65,7 +65,32 @@ const LobbyPage = () => {
                         </ul>
                     </div>
 
-                    <div className="sm:w-96 w-5/6 h-[200px] border-2 mt-10"></div>
+                    <div className="sm:w-96 w-5/6 h-[200px] border-2 mt-10">
+                        <label>
+                            <input
+                                type="radio"
+                                name="matchType"
+                                value="blitz"
+                            />{" "}
+                            Blitz
+                        </label>
+                        <label>
+                            <input
+                                type="radio"
+                                name="matchType"
+                                value="rapid"
+                            />{" "}
+                            Rapid
+                        </label>
+                        <label>
+                            <input
+                                type="radio"
+                                name="matchType"
+                                value="bullet"
+                            />{" "}
+                            Bullet
+                        </label>
+                    </div>
                     <div className="mt-6 w-full flex flex-col items-center space-y-1">
                         <FormError>{startGameError}</FormError>
                         <FormButton

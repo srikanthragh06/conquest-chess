@@ -22,6 +22,7 @@ redisSubscriber.psubscribe("lobby-update:*");
 redisSubscriber.psubscribe("started-game:*");
 redisSubscriber.psubscribe("game-update:*");
 redisSubscriber.psubscribe("game-over:*");
+redisSubscriber.psubscribe("request-draw:*");
 
 redisSubscriber.on("pmessage", onSubscribePMessage);
 
