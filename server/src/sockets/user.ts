@@ -11,7 +11,7 @@ const handleGuestUser = async (decodedToken: any): Promise<string> => {
         throw new Error("Invalid auth token, user not found");
     }
 
-    const guest = await redisClient.get(`guestId:${guestId}:guest`);
+    const guest = await redisClient.get(`chess-app:guestId:${guestId}:guest`);
     if (!guest) {
         throw new Error("Invalid auth token, user not found");
     }
@@ -112,17 +112,19 @@ export const onRegisterUser = async (jwtToken: string, socket: Socket) => {
             );
         }
 
-        const oldUserId = await redisClient.get(`socketId:${socket.id}:userId`);
+        const oldUserId = await redisClient.get(
+            `chess-app:socketId:${socket.id}:userId`
+        );
 
         const tx = redisClient.multi();
 
         if (oldUserId) {
-            tx.del(`userId:${oldUserId}:socketId`);
-            tx.del(`socketId:${socket.id}:userId`);
+            tx.del(`chess-app:userId:${oldUserId}:socketId`);
+            tx.del(`chess-app:socketId:${socket.id}:userId`);
         }
 
-        tx.set(`socketId:${socket.id}:userId`, userId);
-        tx.set(`userId:${userId}:socketId`, socket.id);
+        tx.set(`chess-app:socketId:${socket.id}:userId`, userId);
+        tx.set(`chess-app:userId:${userId}:socketId`, socket.id);
 
         const result = await tx.exec();
         if (!result)

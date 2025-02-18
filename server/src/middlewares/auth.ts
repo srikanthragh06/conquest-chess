@@ -123,8 +123,10 @@ export const isAuthMiddleware = async (
                     "Invalid auth-token, user not found"
                 );
 
-            const guest = await redisClient.get(`guestId:${guestId}:guest`);
-            if (!guest)
+            const guestJSON = await redisClient.get(
+                `chess-app:guestId:${guestId}:guest`
+            );
+            if (!guestJSON)
                 return sendClientSideError(
                     req,
                     res,

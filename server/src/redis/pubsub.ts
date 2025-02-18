@@ -20,7 +20,6 @@ export const onSubscribePMessage = async (
         else if (channel.startsWith("match-select")) {
             const lobbyId = channel.split(":")[1];
             const matchType = message;
-            console.log(matchType);
             socketEmitRoom(io, lobbyId, "match-select", matchType);
         }
         // started-game
@@ -67,7 +66,9 @@ export const onSubscribePMessage = async (
         else if (channel.startsWith("request-draw")) {
             const gameId = channel.split(":")[1];
             const userId = message;
-            const socketId = await redisClient.get(`userId:${userId}:socketId`);
+            const socketId = await redisClient.get(
+                `chess-app:userId:${userId}:socketId`
+            );
             if (socketId) {
                 const socket = io.sockets.sockets.get(socketId);
                 if (socket) {

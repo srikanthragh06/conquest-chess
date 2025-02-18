@@ -189,7 +189,7 @@ export const createGuestHandler = async (
             newGuestId = generateGuestId();
 
             const guestJSON = await redisClient.get(
-                `guestId:${newGuestId}:guest`
+                `chess-app:guestId:${newGuestId}:guest`
             );
             guestIdExists = guestJSON ? true : false;
         } while (guestIdExists);
@@ -198,8 +198,14 @@ export const createGuestHandler = async (
 
         const tx = redisClient.multi();
 
-        tx.set(`guestId:${newGuestId}:guest`, JSON.stringify(newGuest));
-        tx.expire("chess-app:game:5678", 1800);
+        tx.set(
+            `chess-app:guestId:${newGuestId}:guest`,
+            JSON.stringify(newGuest)
+        );
+        tx.expire(
+            `chess-app:guestId:${newGuestId}:guest`,
+            7 * 24 * 60 * 60 * 1000
+        );
 
         const jwtToken = jwt.sign(
             {

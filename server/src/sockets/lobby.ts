@@ -6,7 +6,9 @@ import { redisClient } from "../redis/client";
 
 export const onCreateLobby = async (socket: Socket) => {
     try {
-        const userId = await redisClient.get(`socketId:${socket.id}:userId`);
+        const userId = await redisClient.get(
+            `chess-app:socketId:${socket.id}:userId`
+        );
         if (!userId)
             return socketEmit(
                 socket,
@@ -19,13 +21,15 @@ export const onCreateLobby = async (socket: Socket) => {
 
         const tx = redisClient.multi();
 
-        const oldLobbyId = await redisClient.get(`userId:${userId}:lobbyId`);
+        const oldLobbyId = await redisClient.get(
+            `chess-app:userId:${userId}:lobbyId`
+        );
 
         if (oldLobbyId) {
-            tx.del(`userId:${userId}:lobbyId`);
+            tx.del(`chess-app:userId:${userId}:lobbyId`);
 
             const oldLobbyJSON = await redisClient.get(
-                `lobbyId:${oldLobbyId}:lobby`
+                `chess-app:lobbyId:${oldLobbyId}:lobby`
             );
             if (oldLobbyJSON) {
                 const oldLobby: lobbyType = JSON.parse(oldLobbyJSON);
@@ -43,7 +47,7 @@ export const onCreateLobby = async (socket: Socket) => {
                     }
 
                     tx.set(
-                        `lobbyId:${oldLobbyId}:lobby`,
+                        `chess-app:lobbyId:${oldLobbyId}:lobby`,
                         JSON.stringify(oldLobby)
                     );
                 }
@@ -57,8 +61,11 @@ export const onCreateLobby = async (socket: Socket) => {
             emptySince: null,
         };
 
-        tx.set(`lobbyId:${newLobbyId}:lobby`, JSON.stringify(newLobby));
-        tx.set(`userId:${userId}:lobbyId`, newLobbyId);
+        tx.set(
+            `chess-app:lobbyId:${newLobbyId}:lobby`,
+            JSON.stringify(newLobby)
+        );
+        tx.set(`chess-app:userId:${userId}:lobbyId`, newLobbyId);
 
         const result = await tx.exec();
         if (!result)
@@ -89,7 +96,9 @@ export const onCreateLobby = async (socket: Socket) => {
 
 export const onJoinLobby = async (socket: Socket, lobbyId: string) => {
     try {
-        const userId = await redisClient.get(`socketId:${socket.id}:userId`);
+        const userId = await redisClient.get(
+            `chess-app:socketId:${socket.id}:userId`
+        );
         if (!userId)
             return socketEmit(
                 socket,
@@ -100,7 +109,9 @@ export const onJoinLobby = async (socket: Socket, lobbyId: string) => {
 
         const tx = redisClient.multi();
 
-        const lobbyJSON = await redisClient.get(`lobbyId:${lobbyId}:lobby`);
+        const lobbyJSON = await redisClient.get(
+            `chess-app:lobbyId:${lobbyId}:lobby`
+        );
         if (!lobbyJSON)
             return socketEmit(
                 socket,
@@ -130,8 +141,8 @@ export const onJoinLobby = async (socket: Socket, lobbyId: string) => {
             lobby.emptySince = null;
         }
 
-        tx.set(`lobbyId:${lobbyId}:lobby`, JSON.stringify(lobby));
-        tx.set(`userId:${userId}:lobbyId`, lobbyId);
+        tx.set(`chess-app:lobbyId:${lobbyId}:lobby`, JSON.stringify(lobby));
+        tx.set(`chess-app:userId:${userId}:lobbyId`, lobbyId);
 
         const result = await tx.exec();
         if (!result)
@@ -156,7 +167,9 @@ export const onMatchSelect = async (
     matchType: "BLitz" | "Rapid" | "Bullet"
 ) => {
     try {
-        const userId = await redisClient.get(`socketId:${socket.id}:userId`);
+        const userId = await redisClient.get(
+            `chess-app:socketId:${socket.id}:userId`
+        );
         if (!userId)
             return socketEmit(
                 socket,
@@ -165,7 +178,9 @@ export const onMatchSelect = async (
                 true
             );
 
-        const lobbyJSON = await redisClient.get(`lobbyId:${lobbyId}:lobby`);
+        const lobbyJSON = await redisClient.get(
+            `chess-app:lobbyId:${lobbyId}:lobby`
+        );
         if (!lobbyJSON)
             return socketEmit(
                 socket,

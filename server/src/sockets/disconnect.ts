@@ -4,13 +4,15 @@ import { redisClient } from "../redis/client";
 
 const removeUserFromSocketMappings = async (socketId: string) => {
     try {
-        const userId = await redisClient.get(`socketId:${socketId}:userId`);
+        const userId = await redisClient.get(
+            `chess-app:socketId:${socketId}:userId`
+        );
 
         if (!userId) return null;
 
         const tx = redisClient.multi();
-        tx.del(`socketId:${socketId}:userId`);
-        tx.del(`userId:${userId}:socketId`);
+        tx.del(`chess-app:socketId:${socketId}:userId`);
+        tx.del(`chess-app:userId:${userId}:socketId`);
 
         const result = await tx.exec();
         return result ? userId : null;
@@ -27,9 +29,11 @@ const handleUserLeavingLobby = async (
 ) => {
     try {
         const tx = redisClient.multi();
-        tx.del(`userId:${userId}:lobbyId`);
+        tx.del(`chess-app:userId:${userId}:lobbyId`);
 
-        const lobbyJSON = await redisClient.get(`lobbyId:${lobbyId}:lobby`);
+        const lobbyJSON = await redisClient.get(
+            `chess-app:lobbyId:${lobbyId}:lobby`
+        );
         if (!lobbyJSON) return;
 
         const lobby: lobbyType = JSON.parse(lobbyJSON);
@@ -47,7 +51,7 @@ const handleUserLeavingLobby = async (
                 lobby.hostId = lobby.players[0];
             }
 
-            tx.set(`lobbyId:${lobbyId}:lobby`, JSON.stringify(lobby));
+            tx.set(`chess-app:lobbyId:${lobbyId}:lobby`, JSON.stringify(lobby));
         }
 
         const result = await tx.exec();
@@ -67,7 +71,9 @@ export const onDisconnect = async (socket: Socket) => {
         const userId = await removeUserFromSocketMappings(socket.id);
         if (!userId) return;
 
-        const userLobbyId = await redisClient.get(`userId:${userId}:lobbyId`);
+        const userLobbyId = await redisClient.get(
+            `chess-app:userId:${userId}:lobbyId`
+        );
         if (userLobbyId) {
             await handleUserLeavingLobby(userId, userLobbyId, socket);
         }
