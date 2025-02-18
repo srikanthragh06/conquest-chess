@@ -1,13 +1,15 @@
 import { NextFunction, Request, Response } from "express";
-import { queryClient, transaction } from "../db/postgres";
+import { transaction } from "../db/postgres";
 import {
     sendClientSideError,
+    sendServerSideError,
     sendSuccessResponse,
 } from "../utils/responseTemplates";
 import { findOneWithCondition, insertRecord } from "../db/queries";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import { redisClient } from "../redis/client";
 
 export const signupHandler = async (
     req: Request,
@@ -176,67 +178,55 @@ export const createGuestHandler = async (
     res: Response,
     next: NextFunction
 ) => {
-    const generateGuestId = () => {
-        return crypto.randomBytes(12).toString("base64url").slice(0, 16);
-    };
-
     try {
-        await transaction(async (client) => {
-            let newGuestId: string;
-            let guestIdExists = true;
-            do {
-                newGuestId = generateGuestId();
-                guestIdExists = await findOneWithCondition(
-                    client,
-                    "Guests",
-                    ["guest_id"],
-                    { guest_id: newGuestId }
-                );
-            } while (guestIdExists);
+        const generateGuestId = () => {
+            return crypto.randomBytes(12).toString("base64url").slice(0, 16);
+        };
 
-            const { guest_id: guestId } = await insertRecord(
-                client,
-                "Guests",
-                { guest_id: newGuestId },
-                "guest_id"
+        let newGuestId: string;
+        let guestIdExists = true;
+        do {
+            newGuestId = generateGuestId();
+
+            const guestJSON = await redisClient.get(
+                `guestId:${newGuestId}:guest`
             );
+            guestIdExists = guestJSON ? true : false;
+        } while (guestIdExists);
 
-            const jwtToken = jwt.sign(
-                {
-                    guestId,
-                    isGuest: true,
-                },
-                process.env.JWT_SECRET_KEY as string,
-                { expiresIn: "48h" }
-            );
+        const newGuest = { guestId: newGuestId, createdAt: Date.now() };
 
-            return sendSuccessResponse(
+        const tx = redisClient.multi();
+
+        tx.set(`guestId:${newGuestId}:guest`, JSON.stringify(newGuest));
+        tx.expire("chess-app:game:5678", 1800);
+
+        const jwtToken = jwt.sign(
+            {
+                guestId: newGuestId,
+                isGuest: true,
+            },
+            process.env.JWT_SECRET_KEY as string,
+            { expiresIn: "48h" }
+        );
+
+        const result = await tx.exec();
+        if (!result)
+            return sendServerSideError(
                 req,
                 res,
-                `Guest: ${guestId} registered successfully`,
-                201,
-
-                { jwtToken, user: { guestId: guestId } }
+                new Error("Something went wrong!"),
+                500
             );
-        });
+        return sendSuccessResponse(
+            req,
+            res,
+            `Guest: ${newGuestId} registered successfully`,
+            201,
+
+            { jwtToken, user: { guestId: newGuest.guestId } }
+        );
     } catch (err) {
         next(err);
-    }
-};
-
-export const cleanupGuests = async () => {
-    try {
-        const now = new Date();
-        const cutoffTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-        await transaction(async (client) => {
-            await queryClient(
-                client,
-                `DELETE FROM "Guests" WHERE created_at < $1`,
-                [cutoffTime]
-            );
-        });
-    } catch (err) {
-        console.error(err);
     }
 };

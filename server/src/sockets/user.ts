@@ -7,20 +7,14 @@ import { redisClient } from "../redis/client";
 
 const handleGuestUser = async (decodedToken: any): Promise<string> => {
     const { guestId } = decodedToken;
-
     if (!guestId) {
         throw new Error("Invalid auth token, user not found");
     }
 
-    await transaction(async (client) => {
-        const guest = await findOneWithCondition(client, "Guests", null, {
-            guest_id: guestId,
-        });
-
-        if (!guest) {
-            throw new Error("Invalid auth token, user not found");
-        }
-    });
+    const guest = await redisClient.get(`guestId:${guestId}:guest`);
+    if (!guest) {
+        throw new Error("Invalid auth token, user not found");
+    }
 
     return `Guest_${guestId}`;
 };
@@ -109,6 +103,7 @@ export const onRegisterUser = async (jwtToken: string, socket: Socket) => {
                 userId = await handleRegisteredUser(decodedToken);
             }
         } catch (error: any) {
+            console.error(error);
             return socketEmit(
                 socket,
                 "register-user-error",

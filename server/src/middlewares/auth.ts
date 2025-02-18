@@ -4,6 +4,7 @@ import { sendClientSideError } from "../utils/responseTemplates";
 import jwt from "jsonwebtoken";
 import { transaction } from "../db/postgres";
 import { findOneWithCondition, updateRecords } from "../db/queries";
+import { redisClient } from "../redis/client";
 
 export const signupValidation = [
     body("email")
@@ -114,30 +115,24 @@ export const isAuthMiddleware = async (
             );
 
         if (isGuest) {
-            await transaction(async (client) => {
-                const { guestId } = decodedToken;
-                if (guestId === undefined)
-                    return sendClientSideError(
-                        req,
-                        res,
-                        "Invalid auth-token, user not found"
-                    );
-                const guest = await findOneWithCondition(
-                    client,
-                    "Guests",
-                    null,
-                    { guest_id: guestId }
+            const { guestId } = decodedToken;
+            if (guestId === undefined)
+                return sendClientSideError(
+                    req,
+                    res,
+                    "Invalid auth-token, user not found"
                 );
-                if (!guest)
-                    return sendClientSideError(
-                        req,
-                        res,
-                        "Invalid auth-token, user not found"
-                    );
 
-                (req as any).isGuest = true;
-                (req as any).guestId = guestId;
-            });
+            const guest = await redisClient.get(`guestId:${guestId}:guest`);
+            if (!guest)
+                return sendClientSideError(
+                    req,
+                    res,
+                    "Invalid auth-token, user not found"
+                );
+
+            (req as any).isGuest = true;
+            (req as any).guestId = guestId;
 
             return next();
         } else {

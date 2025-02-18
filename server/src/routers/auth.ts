@@ -5,7 +5,6 @@ import {
     signupValidation,
 } from "../middlewares/auth";
 import {
-    cleanupGuests,
     createGuestHandler,
     loginHandler,
     signupHandler,
@@ -52,7 +51,5 @@ router
     });
 
 router.route("/create-guest").post(createGuestHandler);
-
-setInterval(cleanupGuests, 7 * 24 * 60 * 60 * 1000);
 
 export default router;
