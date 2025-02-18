@@ -17,11 +17,6 @@ export const onStartGame = async (
     matchType: string
 ) => {
     try {
-        await redisClient.watch(
-            `socketId:${socket.id}:userId`,
-            `lobbyId:${lobbyId}:lobby`
-        );
-
         const userId = await redisClient.get(`socketId:${socket.id}:userId`);
         if (!userId)
             return socketEmit(
@@ -82,20 +77,6 @@ export const onStartGame = async (
             },
         };
 
-        await redisClient.watch(
-            `gameId:${newGameId}:game`,
-            `gameId:${newGameId}:moves`,
-
-            `userId:${whiteId}:gameId`,
-            `userId:${blackId}:gameId`,
-
-            `userId:${whiteId}:socketId`,
-            `userId:${blackId}:socketId`,
-
-            `userId:${whiteId}:lobbyId`,
-            `userId:${blackId}:lobbyId`
-        );
-
         const tx = redisClient.multi();
         tx.set(`gameId:${newGameId}:game`, JSON.stringify(newGame));
 
@@ -136,18 +117,11 @@ export const onStartGame = async (
     } catch (err) {
         console.error(err);
         socketEmit(socket, "start-game-error", "Failed to start game", true);
-    } finally {
-        await redisClient.unwatch();
     }
 };
 
 export const onGetGame = async (socket: Socket, gameId: string) => {
     try {
-        await redisClient.watch(
-            `socketId:${socket.id}:userId`,
-            `gameId:${gameId}:game`,
-            `gameId:${gameId}:moves`
-        );
         const userId = await redisClient.get(`socketId:${socket.id}:userId`);
         if (!userId)
             return socketEmit(
@@ -184,8 +158,6 @@ export const onGetGame = async (socket: Socket, gameId: string) => {
     } catch (err) {
         console.error(err);
         socketEmit(socket, "game-game-error", "Failed to get game", true);
-    } finally {
-        await redisClient.unwatch();
     }
 };
 
@@ -195,12 +167,6 @@ export const onMakeMove = async (
     move: { from: string; to: string; promotion?: string }
 ) => {
     try {
-        await redisClient.watch(
-            `socketId:${socket.id}:userId`,
-            `gameId:${gameId}:game`,
-            `gameId:${gameId}:moves`
-        );
-
         const userId = await redisClient.get(`socketId:${socket.id}:userId`);
         if (!userId)
             return socketEmit(
@@ -267,10 +233,6 @@ export const onMakeMove = async (
         const isGameOver = updateGameEnd(game, moves);
 
         if (isGameOver) {
-            await redisClient.watch(
-                `userId:${game.whiteId}:gameId`,
-                `userId:${game.blackId}:gameId`
-            );
             tx.del(`userId:${game.whiteId}:gameId`);
             tx.del(`userId:${game.blackId}:gameId`);
             tx.del(`gameId:${gameId}:game`);
@@ -301,17 +263,11 @@ export const onMakeMove = async (
     } catch (err) {
         console.error(err);
         socketEmit(socket, "make-move-error", "Failed to make move", true);
-    } finally {
-        await redisClient.unwatch();
     }
 };
 
 export const onGetTime = async (socket: Socket, gameId: string) => {
     try {
-        await redisClient.watch(
-            `socketId:${socket.id}:userId`,
-            `gameId:${gameId}:game`
-        );
         const userId = await redisClient.get(`socketId:${socket.id}:userId`);
         if (!userId)
             return socketEmit(
@@ -344,18 +300,11 @@ export const onGetTime = async (socket: Socket, gameId: string) => {
     } catch (err) {
         console.error(err);
         socketEmit(socket, "get-time-error", "Failed to get time", true);
-    } finally {
-        await redisClient.unwatch();
     }
 };
 
 export const onTimeout = async (socket: Socket, gameId: string) => {
     try {
-        await redisClient.watch(
-            `socketId:${socket.id}:userId`,
-            `gameId:${gameId}:game`,
-            `gameId:${gameId}:moves`
-        );
         const userId = await redisClient.get(`socketId:${socket.id}:userId`);
         if (!userId)
             return socketEmit(
@@ -387,9 +336,6 @@ export const onTimeout = async (socket: Socket, gameId: string) => {
         const isGameOver = updateGameEnd(game, moves);
 
         if (isGameOver) {
-            await redisClient.watch(`userId:${game.whiteId}:gameId`);
-            await redisClient.watch(`userId:${game.blackId}:gameId`);
-
             const tx = redisClient.multi();
             tx.del(`userId:${game.whiteId}:gameId`);
             tx.del(`userId:${game.blackId}:gameId`);
@@ -412,18 +358,11 @@ export const onTimeout = async (socket: Socket, gameId: string) => {
     } catch (err) {
         console.error(err);
         socketEmit(socket, "timeout-error", "Failed to time out game", true);
-    } finally {
-        await redisClient.unwatch();
     }
 };
 
 export const onResign = async (socket: Socket, gameId: string) => {
     try {
-        await redisClient.watch(
-            `socketId:${socket.id}:userId`,
-            `gameId:${gameId}:game`,
-            `gameId:${gameId}:moves`
-        );
         const userId = await redisClient.get(`socketId:${socket.id}:userId`);
         if (!userId)
             return socketEmit(
@@ -475,11 +414,6 @@ export const onResign = async (socket: Socket, gameId: string) => {
             game.gameStatus.status = "resignation";
         }
 
-        await redisClient.watch(
-            `userId:${game.whiteId}:gameId`,
-            `userId:${game.blackId}:gameId`
-        );
-
         const tx = redisClient.multi();
         tx.del(`userId:${game.whiteId}:gameId`);
         tx.del(`userId:${game.blackId}:gameId`);
@@ -502,17 +436,11 @@ export const onResign = async (socket: Socket, gameId: string) => {
     } catch (err) {
         socketEmit(socket, "resign-error", "Failed to resign game", true);
         console.error(err);
-    } finally {
-        await redisClient.unwatch();
     }
 };
 
 export const onRequestDraw = async (socket: Socket, gameId: string) => {
     try {
-        await redisClient.watch(
-            `socketId:${socket.id}:userId`,
-            `gameId:${gameId}:game`
-        );
         const userId = await redisClient.get(`socketId:${socket.id}:userId`);
         if (!userId)
             return socketEmit(
@@ -586,18 +514,11 @@ export const onRequestDraw = async (socket: Socket, gameId: string) => {
             true
         );
         console.error(err);
-    } finally {
-        await redisClient.unwatch();
     }
 };
 
 export const onAcceptDraw = async (socket: Socket, gameId: string) => {
     try {
-        await redisClient.watch(
-            `socketId:${socket.id}:userId`,
-            `gameId:${gameId}:game`,
-            `gameId:${gameId}:moves`
-        );
         const userId = await redisClient.get(`socketId:${socket.id}:userId`);
         if (!userId)
             return socketEmit(
@@ -677,17 +598,11 @@ export const onAcceptDraw = async (socket: Socket, gameId: string) => {
     } catch (err) {
         socketEmit(socket, "accept-draw-error", "Failed to accept draw", true);
         console.error(err);
-    } finally {
-        await redisClient.unwatch();
     }
 };
 
 export const onRejectDraw = async (socket: Socket, gameId: string) => {
     try {
-        await redisClient.watch(
-            `socketId:${socket.id}:userId`,
-            `gameId:${gameId}:game`
-        );
         const userId = await redisClient.get(`socketId:${socket.id}:userId`);
         if (!userId)
             return socketEmit(
@@ -759,7 +674,5 @@ export const onRejectDraw = async (socket: Socket, gameId: string) => {
     } catch (err) {
         socketEmit(socket, "reject-draw-error", "Failed to reject draw", true);
         console.error(err);
-    } finally {
-        await redisClient.unwatch();
     }
 };

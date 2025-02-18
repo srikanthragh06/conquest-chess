@@ -4,12 +4,9 @@ import { redisClient } from "../redis/client";
 
 const removeUserFromSocketMappings = async (socketId: string) => {
     try {
-        await redisClient.watch(`socketId:${socketId}:userId`);
         const userId = await redisClient.get(`socketId:${socketId}:userId`);
 
         if (!userId) return null;
-
-        await redisClient.watch(`userId:${userId}:socketId`);
 
         const tx = redisClient.multi();
         tx.del(`socketId:${socketId}:userId`);
@@ -20,8 +17,6 @@ const removeUserFromSocketMappings = async (socketId: string) => {
     } catch (err) {
         console.error(err);
         return null;
-    } finally {
-        await redisClient.unwatch();
     }
 };
 
@@ -31,11 +26,6 @@ const handleUserLeavingLobby = async (
     socket: Socket
 ) => {
     try {
-        await redisClient.watch(
-            `lobbyId:${lobbyId}:lobby`,
-            `userId:${userId}:lobbyId`
-        );
-
         const tx = redisClient.multi();
         tx.del(`userId:${userId}:lobbyId`);
 
@@ -69,8 +59,6 @@ const handleUserLeavingLobby = async (
         }
     } catch (err) {
         console.error(err);
-    } finally {
-        await redisClient.unwatch();
     }
 };
 
@@ -79,14 +67,11 @@ export const onDisconnect = async (socket: Socket) => {
         const userId = await removeUserFromSocketMappings(socket.id);
         if (!userId) return;
 
-        await redisClient.watch(`userId:${userId}:lobbyId`);
         const userLobbyId = await redisClient.get(`userId:${userId}:lobbyId`);
         if (userLobbyId) {
             await handleUserLeavingLobby(userId, userLobbyId, socket);
         }
     } catch (err) {
         console.error(err);
-    } finally {
-        await redisClient.unwatch();
     }
 };

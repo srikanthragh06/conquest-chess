@@ -6,7 +6,6 @@ import { redisClient } from "../redis/client";
 
 export const onCreateLobby = async (socket: Socket) => {
     try {
-        await redisClient.watch(`socketId:${socket.id}:userId`);
         const userId = await redisClient.get(`socketId:${socket.id}:userId`);
         if (!userId)
             return socketEmit(
@@ -18,16 +17,12 @@ export const onCreateLobby = async (socket: Socket) => {
 
         const newLobbyId = generate16CharUniqueString();
 
-        await redisClient.watch(`userId:${userId}:lobbyId`);
-
         const tx = redisClient.multi();
 
         const oldLobbyId = await redisClient.get(`userId:${userId}:lobbyId`);
 
         if (oldLobbyId) {
             tx.del(`userId:${userId}:lobbyId`);
-
-            await redisClient.watch(`lobbyId:${oldLobbyId}:lobby`);
 
             const oldLobbyJSON = await redisClient.get(
                 `lobbyId:${oldLobbyId}:lobby`
@@ -89,14 +84,11 @@ export const onCreateLobby = async (socket: Socket) => {
             true
         );
         console.error("Error during lobby creation:", err);
-    } finally {
-        await redisClient.unwatch();
     }
 };
 
 export const onJoinLobby = async (socket: Socket, lobbyId: string) => {
     try {
-        await redisClient.watch(`socketId:${socket.id}:userId`);
         const userId = await redisClient.get(`socketId:${socket.id}:userId`);
         if (!userId)
             return socketEmit(
@@ -105,11 +97,6 @@ export const onJoinLobby = async (socket: Socket, lobbyId: string) => {
                 "User not registered",
                 true
             );
-
-        await redisClient.watch(
-            `lobbyId:${lobbyId}:lobby`,
-            `userId:${userId}:lobbyId`
-        );
 
         const tx = redisClient.multi();
 
@@ -160,8 +147,6 @@ export const onJoinLobby = async (socket: Socket, lobbyId: string) => {
     } catch (err) {
         socketEmit(socket, "join-lobby-error", "Failed to join lobby", true);
         console.error("Error during joining lobby:", err);
-    } finally {
-        await redisClient.unwatch();
     }
 };
 
@@ -171,7 +156,6 @@ export const onMatchSelect = async (
     matchType: "BLitz" | "Rapid" | "Bullet"
 ) => {
     try {
-        await redisClient.watch(`socketId:${socket.id}:userId`);
         const userId = await redisClient.get(`socketId:${socket.id}:userId`);
         if (!userId)
             return socketEmit(
@@ -180,8 +164,6 @@ export const onMatchSelect = async (
                 "User not registered",
                 true
             );
-
-        await redisClient.watch(`lobbyId:${lobbyId}:lobby`);
 
         const lobbyJSON = await redisClient.get(`lobbyId:${lobbyId}:lobby`);
         if (!lobbyJSON)
@@ -200,7 +182,5 @@ export const onMatchSelect = async (
             true
         );
         console.error("Error during match-select:", err);
-    } finally {
-        await redisClient.unwatch();
     }
 };

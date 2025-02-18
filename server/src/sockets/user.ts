@@ -117,9 +117,7 @@ export const onRegisterUser = async (jwtToken: string, socket: Socket) => {
             );
         }
 
-        await redisClient.watch(`socketId:${socket.id}:userId`);
         const oldUserId = await redisClient.get(`socketId:${socket.id}:userId`);
-        await redisClient.watch(`userId:${oldUserId}:socketId`);
 
         const tx = redisClient.multi();
 
@@ -144,7 +142,5 @@ export const onRegisterUser = async (jwtToken: string, socket: Socket) => {
     } catch (err) {
         console.error(err);
         return socketEmit(socket, "register-user-error", "Server Error", true);
-    } finally {
-        await redisClient.unwatch();
     }
 };
