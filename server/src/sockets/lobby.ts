@@ -1,5 +1,5 @@
 import { Socket } from "socket.io";
-import { lobbyType } from "../state/state";
+import { lobbyType } from "../type/state";
 import { generate16CharUniqueString } from "../utils/utils";
 import { socketEmit } from "../utils/responseTemplates";
 import { redisClient } from "../redis/client";

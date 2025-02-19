@@ -1,5 +1,5 @@
 import { io } from "../server";
-import { gameType, lobbyType, movesType } from "../state/state";
+import { gameType, lobbyType, movesType } from "../type/state";
 import { socketEmitRoom } from "../utils/responseTemplates";
 import { redisClient } from "./client";
 

@@ -1,15 +1,16 @@
 import { Socket } from "socket.io";
-import {
-    gameType,
-    lobbyType,
-    movesType,
-    updateGameEnd,
-    updateRemainingTime,
-} from "../state/state";
+import { gameType, lobbyType, movesType } from "../type/state";
 import { socketEmit } from "../utils/responseTemplates";
 import { generate16CharUniqueString } from "../utils/utils";
 import { Chess } from "chess.js";
 import { redisClient } from "../redis/client";
+import {
+    getGameInDB,
+    getMovesInDB,
+    saveGameInDB,
+    updateGameEnd,
+    updateRemainingTime,
+} from "../helpers/game";
 
 export const onStartGame = async (
     socket: Socket,
@@ -140,15 +141,25 @@ export const onGetGame = async (socket: Socket, gameId: string) => {
         const gameJSON = await redisClient.get(
             `chess-app:gameId:${gameId}:game`
         );
-        if (!gameJSON)
-            return socketEmit(
-                socket,
-                "get-game-error",
-                `Game with gameId ${gameId} not found`,
-                true
-            );
+        if (!gameJSON) {
+            const game = await getGameInDB(gameId);
+            const moves = await getMovesInDB(gameId);
 
-        const game = JSON.parse(gameJSON);
+            if (!game || !moves)
+                return socketEmit(
+                    socket,
+                    "get-game-error",
+                    `Game with gameId ${gameId} not found`,
+                    true
+                );
+
+            return socketEmit(socket, "get-full-game", {
+                game,
+                moves,
+            });
+        }
+
+        const game: gameType = JSON.parse(gameJSON);
 
         const movesRaw = await redisClient.lrange(
             `chess-app:gameId:${gameId}:moves`,
@@ -156,6 +167,9 @@ export const onGetGame = async (socket: Socket, gameId: string) => {
             -1
         );
         const moves: movesType = movesRaw.map((move) => JSON.parse(move));
+
+        if (game.gameStatus.status !== "playing")
+            return socketEmit(socket, "get-full-game", { game, moves });
 
         socket.join(gameId);
 
@@ -244,13 +258,12 @@ export const onMakeMove = async (
         updateRemainingTime(game, moves);
         const isGameOver = updateGameEnd(game, moves);
 
+        tx.set(`chess-app:gameId:${gameId}:game`, JSON.stringify(game));
         if (isGameOver) {
-            tx.del(`chess-app:userId:${game.whiteId}:gameId`);
-            tx.del(`chess-app:userId:${game.blackId}:gameId`);
-            tx.del(`chess-app:gameId:${gameId}:game`);
-            tx.del(`chess-app:gameId:${gameId}:moves`);
-        } else {
-            tx.set(`chess-app:gameId:${gameId}:game`, JSON.stringify(game));
+            tx.expire(`chess-app:userId:${game.whiteId}:gameId`, 1 * 60 * 60);
+            tx.expire(`chess-app:userId:${game.blackId}:gameId`, 1 * 60 * 60);
+            tx.expire(`chess-app:gameId:${gameId}:game`, 1 * 60 * 60);
+            tx.expire(`chess-app:gameId:${gameId}:moves`, 1 * 60 * 60);
         }
 
         const result = await tx.exec();
@@ -262,12 +275,13 @@ export const onMakeMove = async (
                 true
             );
 
-        if (isGameOver)
-            return redisClient.publish(
+        if (isGameOver) {
+            redisClient.publish(
                 `game-over:${gameId}`,
                 JSON.stringify({ game, moves })
             );
-        else
+            await saveGameInDB(game, moves);
+        } else
             return redisClient.publish(
                 `game-update:${gameId}`,
                 JSON.stringify({ game, moves })
@@ -301,7 +315,14 @@ export const onGetTime = async (socket: Socket, gameId: string) => {
                 `Game with gameId ${gameId} not found`,
                 true
             );
-        const game = JSON.parse(gameJSON);
+        const game: gameType = JSON.parse(gameJSON);
+        if (game.gameStatus.status !== "playing")
+            return socketEmit(
+                socket,
+                "get-time-error",
+                "Game is already completed",
+                true
+            );
 
         const movesRaw = await redisClient.lrange(
             `chess-app:gameId:${gameId}:moves`,
@@ -357,10 +378,12 @@ export const onTimeout = async (socket: Socket, gameId: string) => {
 
         if (isGameOver) {
             const tx = redisClient.multi();
-            tx.del(`chess-app:userId:${game.whiteId}:gameId`);
-            tx.del(`chess-app:userId:${game.blackId}:gameId`);
-            tx.del(`chess-app:gameId:${gameId}:game`);
-            tx.del(`chess-app:gameId:${gameId}:moves`);
+            tx.set(`chess-app:gameId:${gameId}:game`, JSON.stringify(game));
+
+            tx.expire(`chess-app:userId:${game.whiteId}:gameId`, 1 * 60 * 60);
+            tx.expire(`chess-app:userId:${game.blackId}:gameId`, 1 * 60 * 60);
+            tx.expire(`chess-app:gameId:${gameId}:game`, 1 * 60 * 60);
+            tx.expire(`chess-app:gameId:${gameId}:moves`, 1 * 60 * 60);
 
             const result = await tx.exec();
             if (!result)
@@ -374,6 +397,7 @@ export const onTimeout = async (socket: Socket, gameId: string) => {
                 `game-over:${gameId}`,
                 JSON.stringify({ game, moves })
             );
+            await saveGameInDB(game, moves);
         }
     } catch (err) {
         console.error(err);
@@ -439,10 +463,13 @@ export const onResign = async (socket: Socket, gameId: string) => {
         }
 
         const tx = redisClient.multi();
-        tx.del(`chess-app:userId:${game.whiteId}:gameId`);
-        tx.del(`chess-app:userId:${game.blackId}:gameId`);
-        tx.del(`chess-app:gameId:${gameId}:game`);
-        tx.del(`chess-app:gameId:${gameId}:moves`);
+
+        tx.set(`chess-app:gameId:${gameId}:game`, JSON.stringify(game));
+
+        tx.expire(`chess-app:userId:${game.whiteId}:gameId`, 1 * 60 * 60);
+        tx.expire(`chess-app:userId:${game.blackId}:gameId`, 1 * 60 * 60);
+        tx.expire(`chess-app:gameId:${gameId}:game`, 1 * 60 * 60);
+        tx.expire(`chess-app:gameId:${gameId}:moves`, 1 * 60 * 60);
 
         const result = await tx.exec();
         if (!result)
@@ -453,10 +480,11 @@ export const onResign = async (socket: Socket, gameId: string) => {
                 true
             );
 
-        return redisClient.publish(
+        redisClient.publish(
             `game-over:${gameId}`,
             JSON.stringify({ game, moves })
         );
+        await saveGameInDB(game, moves);
     } catch (err) {
         socketEmit(socket, "resign-error", "Failed to resign game", true);
         console.error(err);
@@ -609,10 +637,12 @@ export const onAcceptDraw = async (socket: Socket, gameId: string) => {
 
         game.gameStatus.status = "mutual-draw";
         const tx = redisClient.multi();
-        tx.del(`chess-app:userId:${game.whiteId}:gameId`);
-        tx.del(`chess-app:userId:${game.blackId}:gameId`);
-        tx.del(`chess-app:gameId:${gameId}:game`);
-        tx.del(`chess-app:gameId:${gameId}:moves`);
+        tx.set(`chess-app:gameId:${gameId}:game`, JSON.stringify(game));
+
+        tx.expire(`chess-app:userId:${game.whiteId}:gameId`, 1 * 60 * 60);
+        tx.expire(`chess-app:userId:${game.blackId}:gameId`, 1 * 60 * 60);
+        tx.expire(`chess-app:gameId:${gameId}:game`, 1 * 60 * 60);
+        tx.expire(`chess-app:gameId:${gameId}:moves`, 1 * 60 * 60);
 
         const result = await tx.exec();
         if (!result)
@@ -623,10 +653,11 @@ export const onAcceptDraw = async (socket: Socket, gameId: string) => {
                 true
             );
 
-        return redisClient.publish(
+        redisClient.publish(
             `game-over:${gameId}`,
             JSON.stringify({ game, moves })
         );
+        await saveGameInDB(game, moves);
     } catch (err) {
         socketEmit(socket, "accept-draw-error", "Failed to accept draw", true);
         console.error(err);

@@ -1,5 +1,5 @@
 import { Socket } from "socket.io";
-import { lobbyType } from "../state/state";
+import { lobbyType } from "../type/state";
 import { redisClient } from "../redis/client";
 
 const removeUserFromSocketMappings = async (socketId: string) => {

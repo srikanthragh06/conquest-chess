@@ -10,6 +10,7 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { redisClient } from "../redis/client";
+import { guestType } from "../type/state";
 
 export const signupHandler = async (
     req: Request,
@@ -194,7 +195,10 @@ export const createGuestHandler = async (
             guestIdExists = guestJSON ? true : false;
         } while (guestIdExists);
 
-        const newGuest = { guestId: newGuestId, createdAt: Date.now() };
+        const newGuest: guestType = {
+            guestId: newGuestId,
+            createdAt: Date.now(),
+        };
 
         const tx = redisClient.multi();
 
@@ -202,10 +206,7 @@ export const createGuestHandler = async (
             `chess-app:guestId:${newGuestId}:guest`,
             JSON.stringify(newGuest)
         );
-        tx.expire(
-            `chess-app:guestId:${newGuestId}:guest`,
-            7 * 24 * 60 * 60 * 1000
-        );
+        tx.expire(`chess-app:guestId:${newGuestId}:guest`, 7 * 24 * 60 * 60);
 
         const jwtToken = jwt.sign(
             {

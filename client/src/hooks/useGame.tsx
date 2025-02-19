@@ -29,6 +29,8 @@ const useGame = () => {
 
     const [drawRequest, setDrawRequest] = useState(false);
 
+    const [inPast, setInPast] = useState(false);
+
     const isValidTurn = () => {
         const userId = userDetails.isGuest
             ? `Guest_${userDetails.id}`
@@ -104,6 +106,15 @@ const useGame = () => {
     const makeMove = (from: Square, to: Square, promotion: string) => {
         if (!isValidTurn()) return;
         if (game && game.gameStatus.status !== "playing") return;
+        const isUserPlayer = game
+            ? userDetails.isGuest
+                ? [`Guest_${userDetails.id}`].includes(game?.whiteId) ||
+                  [`Guest_${userDetails.id}`].includes(game?.blackId)
+                : [userDetails.id].includes(game?.whiteId) ||
+                  [userDetails.id].includes(game?.blackId)
+            : false;
+        if (!isUserPlayer) return;
+        if (inPast) return;
 
         const updatedBoard = new Chess(board.fen());
         updatedBoard.move({ from, to, promotion });
@@ -240,6 +251,23 @@ const useGame = () => {
         }
 
         socket.on(
+            "get-full-game",
+            ({
+                game: serverGame,
+                moves: serverMoves,
+            }: {
+                game: gameType;
+                moves: movesType;
+            }) => {
+                const updatedBoard = new Chess(serverGame.fen);
+                setGame(serverGame);
+                setMoves(serverMoves);
+                setBoard(updatedBoard);
+                setGameError(null);
+            }
+        );
+
+        socket.on(
             "game-update",
             ({
                 game: serverGame,
@@ -282,6 +310,7 @@ const useGame = () => {
 
         return () => {
             socket.off("game-update");
+            socket.off("get-full-game");
             socket.off("game-over");
             socket.off("get-game-error");
             socket.off("make-move-error");
@@ -294,6 +323,7 @@ const useGame = () => {
         game,
         moves,
         board,
+        setBoard,
         handlePieceDrop,
         handleSquareClick,
         optionSquares,
@@ -307,6 +337,8 @@ const useGame = () => {
         drawRequest,
         handleAcceptDraw,
         handleRejectDraw,
+        inPast,
+        setInPast,
     };
 };
 

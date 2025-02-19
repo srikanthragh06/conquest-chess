@@ -11,8 +11,10 @@ const handleGuestUser = async (decodedToken: any): Promise<string> => {
         throw new Error("Invalid auth token, user not found");
     }
 
-    const guest = await redisClient.get(`chess-app:guestId:${guestId}:guest`);
-    if (!guest) {
+    const guestJSON = await redisClient.get(
+        `chess-app:guestId:${guestId}:guest`
+    );
+    if (!guestJSON) {
         throw new Error("Invalid auth token, user not found");
     }
 

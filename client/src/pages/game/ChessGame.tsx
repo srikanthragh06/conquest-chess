@@ -6,10 +6,12 @@ import FormError from "../../components/FormError";
 import { Chessboard } from "react-chessboard";
 import Timers from "./Timers";
 import FormButton from "../../components/FormButton";
+import UndoRedo from "./UndoRedo";
 
 const ChessGame = () => {
     const {
         board,
+        setBoard,
         moves,
         game,
         handlePieceDrop,
@@ -25,15 +27,28 @@ const ChessGame = () => {
         drawRequest,
         handleAcceptDraw,
         handleRejectDraw,
+        setInPast,
     } = useGame();
 
     const userDetails = useRecoilValue(userDetailsState);
 
+    const isUserPlayer = game
+        ? userDetails.isGuest
+            ? [`Guest_${userDetails.id}`].includes(game?.whiteId) ||
+              [`Guest_${userDetails.id}`].includes(game?.blackId)
+            : [userDetails.id].includes(game?.whiteId) ||
+              [userDetails.id].includes(game?.blackId)
+        : false;
+
     return (
         <div className="w-2/3 flex space-x-4 justify-center border-">
             <div className="w-1/2  flex flex-col items-center space-y-3">
-                <div className="h-[4px]" />
-                {game && drawRequest && (
+                {game && (
+                    <h1 className="text-lg font-bold mt-2 mb-1">
+                        {game.whiteId} vs {game.blackId}
+                    </h1>
+                )}
+                {game && drawRequest && isUserPlayer && (
                     <div
                         className="flex flex-col w-full justify-evenly 
                                 text-base items-center bg-gray-900 rounded-lg
@@ -57,25 +72,27 @@ const ChessGame = () => {
                         </div>
                     </div>
                 )}
-                {game && game.gameStatus.status === "playing" && (
-                    <div
-                        className="flex w-full justify-evenly
+                {game &&
+                    game.gameStatus.status === "playing" &&
+                    isUserPlayer && (
+                        <div
+                            className="flex w-full justify-evenly
                 "
-                    >
-                        <FormButton
-                            className="text-white bg-gray-800 px-7 text-sm mt-3"
-                            onClick={handleResign}
                         >
-                            Resign
-                        </FormButton>
-                        <FormButton
-                            className="text-white bg-gray-800 px-7 text-sm mt-3"
-                            onClick={handleRequestDraw}
-                        >
-                            Draw
-                        </FormButton>
-                    </div>
-                )}
+                            <FormButton
+                                className="text-white bg-gray-800 px-7 text-sm mt-3"
+                                onClick={handleResign}
+                            >
+                                Resign
+                            </FormButton>
+                            <FormButton
+                                className="text-white bg-gray-800 px-7 text-sm mt-3"
+                                onClick={handleRequestDraw}
+                            >
+                                Draw
+                            </FormButton>
+                        </div>
+                    )}
                 <p>{getGameStatusMsg()}</p>
                 <FormError className="text-lg">{gameError}</FormError>
                 <Chessboard
@@ -102,7 +119,16 @@ const ChessGame = () => {
                     showPromotionDialog={showPromotionDialog}
                     onPromotionPieceSelect={onPromotionPieceSelect}
                 />
-                {game && moves && <Timers game={game} moves={moves} />}
+                {game && moves && game.gameStatus.status === "playing" && (
+                    <Timers game={game} moves={moves} />
+                )}
+                {game && moves && (
+                    <UndoRedo
+                        setBoard={setBoard}
+                        moves={moves}
+                        setInPast={setInPast}
+                    />
+                )}
             </div>
             {moves && <MovesDisplay moves={moves} />}
         </div>
