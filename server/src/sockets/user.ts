@@ -4,6 +4,7 @@ import { findOneWithCondition, updateRecords } from "../db/queries";
 import { socketEmit } from "../utils/responseTemplates";
 import jwt from "jsonwebtoken";
 import { redisClient } from "../redis/client";
+import { gameType } from "../type/state";
 
 const handleGuestUser = async (decodedToken: any): Promise<string> => {
     const { guestId } = decodedToken;
@@ -51,6 +52,22 @@ const handleRegisteredUser = async (decodedToken: any): Promise<string> => {
     });
 
     return username;
+};
+
+export const handleJoinOldGame = async (socket: Socket, userId: string) => {
+    const gameId = await redisClient.get(`chess-app:userId:${userId}:gameId`);
+    if (gameId) {
+        const gameJSON = await redisClient.get(
+            `chess-app:gameId:${gameId}:game`
+        );
+        if (gameJSON) {
+            const game: gameType = JSON.parse(gameJSON);
+
+            if (game.gameStatus.status === "playing") {
+                socket.join(gameId);
+            }
+        }
+    }
 };
 
 export const onRegisterUser = async (jwtToken: string, socket: Socket) => {
@@ -127,6 +144,8 @@ export const onRegisterUser = async (jwtToken: string, socket: Socket) => {
 
         tx.set(`chess-app:socketId:${socket.id}:userId`, userId);
         tx.set(`chess-app:userId:${userId}:socketId`, socket.id);
+
+        await handleJoinOldGame(socket, userId);
 
         const result = await tx.exec();
         if (!result)

@@ -1,12 +1,13 @@
 import { useRecoilValue } from "recoil";
 import useGame from "../../hooks/useGame";
 import MovesDisplay from "./MovesDisplay";
-import { userDetailsState } from "../../store/auth";
+import { isRegisteredState, userDetailsState } from "../../store/auth";
 import FormError from "../../components/FormError";
 import { Chessboard } from "react-chessboard";
 import Timers from "./Timers";
 import FormButton from "../../components/FormButton";
 import UndoRedo from "./UndoRedo";
+import { VscDebugDisconnect } from "react-icons/vsc";
 
 const ChessGame = () => {
     const {
@@ -31,6 +32,7 @@ const ChessGame = () => {
     } = useGame();
 
     const userDetails = useRecoilValue(userDetailsState);
+    const isRegistered = useRecoilValue(isRegisteredState);
 
     const isUserPlayer = game
         ? userDetails.isGuest
@@ -43,6 +45,16 @@ const ChessGame = () => {
     return (
         <div className="w-2/3 flex space-x-4 justify-center border-">
             <div className="w-1/2  flex flex-col items-center space-y-3">
+                {!isRegistered &&
+                    game &&
+                    game.gameStatus.status === "playing" && (
+                        <div className="flex space-x-2">
+                            <VscDebugDisconnect className="text-2xl text-red-600" />
+                            <span className="text-base text-red-600">
+                                No connection :(
+                            </span>
+                        </div>
+                    )}
                 {game && (
                     <h1 className="text-lg font-bold mt-2 mb-1">
                         {game.whiteId} vs {game.blackId}

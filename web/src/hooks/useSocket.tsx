@@ -11,8 +11,6 @@ const useSocket = () => {
     useEffect(() => {
         if (userDetails.id) {
             socket.on("connect", () => {
-                console.log(`Connected to server with socket ID ${socket.id}`);
-
                 const authToken = getAuthToken();
 
                 socket.emit("register-user", { authToken });
@@ -24,6 +22,15 @@ const useSocket = () => {
 
             socket.on("error", (msg: string) => {
                 console.log("Socket error: ", msg);
+            });
+
+            socket.on("disconnect", (reason) => {
+                setIsRegistered(false);
+            });
+
+            socket.on("reconnect", () => {
+                const authToken = getAuthToken();
+                socket.emit("register-user", { authToken });
             });
 
             socket.connect();

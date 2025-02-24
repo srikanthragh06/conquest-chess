@@ -6,13 +6,14 @@ import {
     PromotionPieceOption,
     Square,
 } from "react-chessboard/dist/chessboard/types";
-import { userDetailsState } from "../store/auth";
+import { isRegisteredState, userDetailsState } from "../store/auth";
 import { useRecoilValue } from "recoil";
 import { gameType, movesType } from "../types/game";
 
 const useGame = () => {
     const { gameId } = useParams();
     const userDetails = useRecoilValue(userDetailsState);
+    const isRegistered = useRecoilValue(isRegisteredState);
 
     const [game, setGame] = useState<gameType | null>(null);
     const [moves, setMoves] = useState<movesType | null>(null);
@@ -115,6 +116,7 @@ const useGame = () => {
             : false;
         if (!isUserPlayer) return;
         if (inPast) return;
+        if (!isRegistered) return;
 
         const updatedBoard = new Chess(board.fen());
         updatedBoard.move({ from, to, promotion });
@@ -246,7 +248,7 @@ const useGame = () => {
     };
 
     useEffect(() => {
-        if (gameId) {
+        if (gameId && isRegistered) {
             socket.emit("get-game", gameId);
         }
 
@@ -317,7 +319,7 @@ const useGame = () => {
             socket.off("time-update");
             socket.off("request-draw");
         };
-    }, [setGame, setGameError, gameId]);
+    }, [setGame, setGameError, gameId, isRegistered]);
 
     return {
         game,

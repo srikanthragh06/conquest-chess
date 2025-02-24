@@ -7,7 +7,7 @@ const GamePage = () => {
             hasNavbar={true}
             authRequired={false}
             noAuthRequired={false}
-            registeredRequired={true}
+            registeredRequired={false}
             className="items-center"
         >
             <ChessGame />

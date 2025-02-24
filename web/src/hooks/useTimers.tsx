@@ -135,7 +135,7 @@ const useTimers = (game: gameType, moves: movesType) => {
         if (whiteTimeRem !== null) {
             const seconds = Math.round(whiteTimeRem / 1000);
 
-            if (seconds % 10 === 0 && periodicUpdateSwitch) {
+            if (seconds % 5 === 0 && periodicUpdateSwitch) {
                 socket.emit("get-time", game.gameId);
                 setPeriodicUpdateSwitch(false);
             } else if (seconds % 10 === 3 && !periodicUpdateSwitch) {
