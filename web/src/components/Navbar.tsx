@@ -45,9 +45,12 @@ const Navbar = () => {
             >
                 <FiAlignJustify className="lg:text-5xl md:text-4xl text-3xl cursor-pointer hover:opacity-85 transition" />
                 <div
-                    className="cursor-pointer w-64 border-2 sm:block hidden"
+                    className="cursor-pointer w-64 sm:block hidden almendra-sc-regular
+                                sm:text-2xl lg:text-4xl md:mt-1"
                     onClick={() => navigate("/")}
-                ></div>
+                >
+                    Conquest Chess
+                </div>
             </div>
             <div
                 className="flex md:space-x-8 space-x-3 justify-evenly

@@ -11,3 +11,9 @@
 .scrollbar-hide {
     scrollbar-width: none;
 }
+
+.almendra-sc-regular {
+    font-family: "Almendra SC", serif;
+    font-weight: 400;
+    font-style: normal;
+}

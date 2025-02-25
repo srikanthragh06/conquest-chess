@@ -26,7 +26,7 @@ const Signup = ({
             className="flex flex-col items-center  mt-[120px]
                 sm:w-[500px] w-[85%] h- space-y-4 border-"
         >
-            <div className="border-2 w-36 h-36">Logo</div>
+            <img className="w-36 h-36" src="logo.png" />
 
             <form
                 className="w-full border-red-600

@@ -24,7 +24,7 @@ const useSocket = () => {
                 console.log("Socket error: ", msg);
             });
 
-            socket.on("disconnect", (reason) => {
+            socket.on("disconnect", () => {
                 setIsRegistered(false);
             });
 
