@@ -1,8 +1,16 @@
-import { consoleLogCyan, consoleLogRed } from "../utils/colorConsoleLogging";
+import {
+    consoleLogCyan,
+    consoleLogRed,
+    consoleLogYellow,
+} from "../utils/colorConsoleLogging";
 import dotenv from "dotenv";
 import { Pool, PoolClient, QueryResult } from "pg";
 
 dotenv.config();
+
+const MAX_RETRIES = 10;
+const RETRY_DELAY_MS = 3000;
+
 export const pool = new Pool({
     user: process.env.POSTGRES_USERNAME,
     password: process.env.POSTGRES_PASSWORD,
@@ -18,7 +26,7 @@ export const pool = new Pool({
  * is logged to the console. If the connection is not successful, an error message
  * is logged to the console and the error is logged as well.
  */
-export const testDatabaseConnection = async () => {
+export const testDatabaseConnection = async (retries = MAX_RETRIES) => {
     try {
         const client = await pool.connect();
 
@@ -35,9 +43,22 @@ export const testDatabaseConnection = async () => {
             client.release();
         }
     } catch (error) {
-        // Log an error message if the connection failed
-        consoleLogRed("Connection to Postgres Database failed :(");
-        console.log(error);
+        // try the connection again and again until retries are over
+        if (retries > 0) {
+            consoleLogYellow(
+                `Database connection failed. Retrying in ${
+                    RETRY_DELAY_MS / 1000
+                }s... (${MAX_RETRIES - retries + 1}/${MAX_RETRIES})`
+            );
+            setTimeout(
+                () => testDatabaseConnection(retries - 1),
+                RETRY_DELAY_MS
+            );
+        } else {
+            consoleLogRed(
+                "Database connection failed after multiple attempts."
+            );
+        }
     }
 };
 
