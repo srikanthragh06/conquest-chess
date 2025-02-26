@@ -1,11 +1,7 @@
 import { Chess } from "chess.js";
 import { gameType, movesType } from "../type/state";
 import { queryClient, transaction } from "../db/postgres";
-import {
-    findAllWithCondition,
-    findOneWithCondition,
-    insertRecord,
-} from "../db/queries";
+import { findOneWithCondition, insertRecord } from "../db/queries";
 
 export const updateRemainingTime = (game: gameType, moves: movesType) => {
     let whiteTime =

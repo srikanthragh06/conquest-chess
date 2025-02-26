@@ -172,6 +172,12 @@ export const onGetGame = async (socket: Socket, gameId: string) => {
             return socketEmit(socket, "get-full-game", { game, moves });
 
         socket.join(gameId);
+        await redisClient.set(`chess-app:userId:${userId}:gameId`, gameId);
+        if (userId !== game.whiteId && userId !== game.blackId)
+            await redisClient.expire(
+                `chess-app:userId:${userId}:gameId`,
+                2 * 60 * 60
+            );
 
         socketEmit(socket, "game-update", {
             game,
@@ -260,10 +266,10 @@ export const onMakeMove = async (
 
         tx.set(`chess-app:gameId:${gameId}:game`, JSON.stringify(game));
         if (isGameOver) {
-            tx.expire(`chess-app:userId:${game.whiteId}:gameId`, 1 * 60 * 60);
-            tx.expire(`chess-app:userId:${game.blackId}:gameId`, 1 * 60 * 60);
-            tx.expire(`chess-app:gameId:${gameId}:game`, 1 * 60 * 60);
-            tx.expire(`chess-app:gameId:${gameId}:moves`, 1 * 60 * 60);
+            tx.expire(`chess-app:userId:${game.whiteId}:gameId`, 1 * 60);
+            tx.expire(`chess-app:userId:${game.blackId}:gameId`, 1 * 60);
+            tx.expire(`chess-app:gameId:${gameId}:game`, 1 * 60);
+            tx.expire(`chess-app:gameId:${gameId}:moves`, 1 * 60);
         }
 
         const result = await tx.exec();

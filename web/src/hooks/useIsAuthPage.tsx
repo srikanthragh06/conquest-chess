@@ -30,7 +30,7 @@ const useIsAuthPage = (authRequired: boolean, noAuthRequired: boolean) => {
 
         try {
             const res = await isAuthApi(token);
-            if (res) {
+            if (res?.data) {
                 if (!res.data?.error) {
                     if (res.data.user.isGuest)
                         setUserDetails({
@@ -65,7 +65,7 @@ const useIsAuthPage = (authRequired: boolean, noAuthRequired: boolean) => {
     const handleCreateGuest = async () => {
         try {
             const res = await createGuestApi();
-            if (res) {
+            if (res?.data) {
                 if (!res.data?.error) {
                     setUserDetails({
                         id: res.data.user.guestId,
@@ -73,8 +73,10 @@ const useIsAuthPage = (authRequired: boolean, noAuthRequired: boolean) => {
                     });
                     setAuthToken(res.data.jwtToken);
                 } else {
+                    resetAuthState();
                 }
             } else {
+                resetAuthState();
             }
         } catch (err) {
             console.error(err);

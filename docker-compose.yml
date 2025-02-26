@@ -1,51 +1,51 @@
 version: "3.9"
 
 services:
-  server:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./server:/server
-      - /server/node_modules
-    working_dir: /server
-    env_file:
-      - ./server/.env.dev
-    depends_on:
-      - redis
-      - postgres
+    server:
+        build:
+            context: ./server
+            dockerfile: Dockerfile
+        ports:
+            - "3000:3000"
+        volumes:
+            - ./server:/server
+            - /server/node_modules
+        working_dir: /server
+        env_file:
+            - ./server/.env.dev
+        depends_on:
+            - redis
+            - postgres
 
-  redis:
-    image: redis:latest
-    ports:
-      - "8001:6379"
+    redis:
+        image: redis:latest
+        ports:
+            - "8001:6379"
 
-  postgres:
-    image: postgres:latest
-    environment:
-      POSTGRES_USER: chessapp
-      POSTGRES_PASSWORD: chessapp
-      POSTGRES_DB: chessapp
-    ports:
-      - "8000:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    postgres:
+        image: postgres:latest
+        environment:
+            POSTGRES_USER: chessapp
+            POSTGRES_PASSWORD: chessapp
+            POSTGRES_DB: chessapp
+        ports:
+            - "8000:5432"
+        volumes:
+            - postgres-data:/var/lib/postgresql/data
+            - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
-  web:
-    build:
-      context: ./web
-      dockerfile: Dockerfile
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./web:/web
-      - /web/node_modules
-    working_dir: /web
-    env_file:
-      - ./web/.env.dev
-    
+    web:
+        build:
+            context: ./web
+            dockerfile: Dockerfile
+        ports:
+            - "5173:5173"
+        volumes:
+            - ./web:/web
+            - /web/node_modules
+        working_dir: /web
+        env_file:
+            - ./web/.env.dev
+
 volumes:
-  postgres-data:
+    postgres-data:
