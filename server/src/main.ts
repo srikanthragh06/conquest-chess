@@ -1,4 +1,4 @@
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import { consoleLogCyan } from "./utils/colorConsoleLogging";
 import bodyParser from "body-parser";
@@ -15,6 +15,7 @@ import userRouter from "./routers/user";
 import { handleIOConnection } from "./sockets/main";
 import { app, io, server } from "./server";
 import { testRedisConnection } from "./redis/client";
+import { sendSuccessResponse } from "./utils/responseTemplates";
 
 io.on("connection", handleIOConnection);
 
@@ -31,6 +32,13 @@ app.use(logRequest);
 app.use(incorrectJSONFormatHandler);
 
 // main routes
+app.get("/api/hi", (req: Request, res: Response, next: NextFunction) => {
+    try {
+        return sendSuccessResponse(req, res, "Hey!");
+    } catch (err) {
+        next(err);
+    }
+});
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 
