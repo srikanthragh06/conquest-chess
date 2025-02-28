@@ -58,6 +58,7 @@ export const onCreateLobby = async (socket: Socket) => {
             lobbyId: newLobbyId,
             hostId: userId,
             players: [userId],
+            matchType: "Blitz",
             emptySince: null,
         };
 
@@ -191,7 +192,19 @@ export const onMatchSelect = async (
                 `Lobby with ID ${lobbyId} does not exist`,
                 true
             );
-        redisClient.publish(`chess-app:match-select:${lobbyId}`, matchType);
+
+        const lobby = JSON.parse(lobbyJSON);
+        lobby.matchType = matchType;
+
+        await redisClient.set(
+            `chess-app:lobbyId:${lobbyId}:lobby`,
+            JSON.stringify(lobby)
+        );
+
+        redisClient.publish(
+            `chess-app:lobby-update:${lobbyId}`,
+            JSON.stringify(lobby)
+        );
     } catch (err) {
         socketEmit(
             socket,
@@ -200,5 +213,72 @@ export const onMatchSelect = async (
             true
         );
         console.error("Error during match-select:", err);
+    }
+};
+
+export const onLeaveLobby = async (socket: Socket, lobbyId: string) => {
+    try {
+        const userId = await redisClient.get(
+            `chess-app:socketId:${socket.id}:userId`
+        );
+        if (!userId)
+            return socketEmit(
+                socket,
+                "leave-lobby-error",
+                "User not registered",
+                true
+            );
+
+        const lobbyJSON = await redisClient.get(
+            `chess-app:lobbyId:${lobbyId}:lobby`
+        );
+        if (!lobbyJSON)
+            return socketEmit(
+                socket,
+                "leave-lobby-error",
+                `Lobby with ID ${lobbyId} does not exist`,
+                true
+            );
+
+        const lobby: lobbyType = JSON.parse(lobbyJSON);
+
+        const tx = redisClient.multi();
+        tx.del(`chess-app:userId:${userId}:lobbyId`);
+        if (lobby.players.includes(userId)) {
+            lobby.players = lobby.players.filter(
+                (playerId: string) => playerId !== userId
+            );
+            socket.leave(lobbyId);
+
+            if (lobby.players.length === 0) {
+                lobby.emptySince = Date.now();
+            } else if (lobby.hostId === userId) {
+                lobby.hostId = lobby.players[0];
+            }
+
+            tx.set(`chess-app:lobbyId:${lobbyId}:lobby`, JSON.stringify(lobby));
+        }
+
+        const result = await tx.exec();
+        if (!result)
+            return socketEmit(
+                socket,
+                "leave-lobby-error",
+                "Error while leaving lobby",
+                true
+            );
+
+        redisClient.publish(
+            `chess-app:lobby-update:${lobbyId}`,
+            JSON.stringify(lobby)
+        );
+    } catch (err) {
+        socketEmit(
+            socket,
+            "leave-lobby-error",
+            "Error while leaving lobby",
+            true
+        );
+        console.error("Error during leaving lobby:", err);
     }
 };

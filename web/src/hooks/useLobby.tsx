@@ -17,16 +17,11 @@ const useLobby = () => {
 
     const isRegisterd = useRecoilValue(isRegisteredState);
 
-    const [matchType, setMatchType] = useState<"Blitz" | "Rapid" | "Bullet">(
-        "Blitz"
-    );
-
     const handleStartGame = (e: FormEvent) => {
         e.preventDefault();
         if (lobbyDetails) {
             socket.emit("start-game", {
                 lobbyId: lobbyDetails.lobbyId,
-                matchType,
             });
         }
     };
@@ -38,8 +33,16 @@ const useLobby = () => {
                 ? lobbyDetails.hostId === "Guest_" + userDetails.id
                 : lobbyDetails.hostId === userDetails.id)
         ) {
-            setMatchType(type);
-            socket.emit("match-select", { lobbyId, matchType: type });
+            if (lobbyDetails) {
+                setLobbyDetails((prev) => {
+                    if (!prev) return prev;
+                    return { ...prev, matchType: type };
+                });
+                socket.emit("match-select", {
+                    lobbyId,
+                    matchType: type,
+                });
+            }
         }
     };
 
@@ -54,17 +57,11 @@ const useLobby = () => {
                 setLobbyDetails(null);
                 setLobbyDetailsError(msg);
             });
-            socket.on(
-                "match-select",
-                (matchType: "Rapid" | "Blitz" | "Bullet") => {
-                    setMatchType(matchType);
-                }
-            );
         }
 
         return () => {
             socket.off("lobby-details");
-            socket.off("match-select");
+            socket.off("lobby-details-error");
         };
     }, [lobbyId, isRegisterd]);
 
@@ -80,6 +77,8 @@ const useLobby = () => {
         return () => {
             socket.off("started-game");
             socket.off("start-game-error");
+            console.log("leavelobby");
+            socket.emit("leave-lobby", { lobbyId });
         };
     }, [setStartGameError, navigate]);
 
@@ -89,7 +88,6 @@ const useLobby = () => {
         lobbyDetailsError,
         handleStartGame,
         startGameError,
-        matchType,
         handleMatchTypeSelect,
     };
 };

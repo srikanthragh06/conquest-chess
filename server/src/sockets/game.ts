@@ -12,11 +12,7 @@ import {
     updateRemainingTime,
 } from "../helpers/game";
 
-export const onStartGame = async (
-    socket: Socket,
-    lobbyId: string,
-    matchType: string
-) => {
+export const onStartGame = async (socket: Socket, lobbyId: string) => {
     try {
         const userId = await redisClient.get(
             `chess-app:socketId:${socket.id}:userId`
@@ -66,7 +62,7 @@ export const onStartGame = async (
 
         const newGame: gameType = {
             gameId: newGameId,
-            type: matchType as "Blitz" | "Rapid" | "Bullet",
+            type: lobby.matchType,
             whiteId,
             blackId,
             fen: new Chess().fen(),

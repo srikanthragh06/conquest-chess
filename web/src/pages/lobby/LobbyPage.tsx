@@ -14,7 +14,6 @@ const LobbyPage = () => {
         lobbyDetailsError,
         handleStartGame,
         startGameError,
-        matchType,
         handleMatchTypeSelect,
     } = useLobby();
 
@@ -87,7 +86,7 @@ const LobbyPage = () => {
                                                     "cursor-pointer"
                                                 }
                                     ${
-                                        matchType === type
+                                        lobbyDetails?.matchType === type
                                             ? " hover:opacity-80 active:opacity-60"
                                             : "opacity-30"
                                     }

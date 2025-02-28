@@ -13,14 +13,7 @@ export const onSubscribePMessage = async (
         if (channel.startsWith("chess-app:lobby-update")) {
             const lobbyId = channel.split(":")[2];
             const lobby: lobbyType = JSON.parse(message);
-
             socketEmitRoom(io, lobbyId, "lobby-details", lobby);
-        }
-        // match-select
-        else if (channel.startsWith("chess-app:match-select")) {
-            const lobbyId = channel.split(":")[2];
-            const matchType = message;
-            socketEmitRoom(io, lobbyId, "match-select", matchType);
         }
         // started-game
         else if (channel.startsWith("chess-app:started-game")) {
