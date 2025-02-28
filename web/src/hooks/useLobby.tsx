@@ -77,10 +77,14 @@ const useLobby = () => {
         return () => {
             socket.off("started-game");
             socket.off("start-game-error");
-            console.log("leavelobby");
-            socket.emit("leave-lobby", { lobbyId });
         };
     }, [setStartGameError, navigate]);
+
+    useEffect(() => {
+        return () => {
+            socket.emit("leave-lobby", { lobbyId });
+        };
+    }, []);
 
     return {
         lobbyId,
