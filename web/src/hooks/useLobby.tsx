@@ -57,7 +57,6 @@ const useLobby = () => {
             socket.on(
                 "match-select",
                 (matchType: "Rapid" | "Blitz" | "Bullet") => {
-                    console.log(matchType);
                     setMatchType(matchType);
                 }
             );

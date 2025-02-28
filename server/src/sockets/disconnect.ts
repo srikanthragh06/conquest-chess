@@ -57,7 +57,7 @@ const handleUserLeavingLobby = async (
         const result = await tx.exec();
         if (result) {
             redisClient.publish(
-                `lobby:${lobbyId}:update`,
+                `chess-app:lobby-update:${lobbyId}`,
                 JSON.stringify(lobby)
             );
         }

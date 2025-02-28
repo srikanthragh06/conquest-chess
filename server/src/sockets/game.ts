@@ -111,7 +111,7 @@ export const onStartGame = async (
             );
 
         redisClient.publish(
-            `started-game:${newGameId}`,
+            `chess-app:started-game:${newGameId}`,
             JSON.stringify({
                 gameId: newGameId,
                 lobbyId,
@@ -283,13 +283,13 @@ export const onMakeMove = async (
 
         if (isGameOver) {
             redisClient.publish(
-                `game-over:${gameId}`,
+                `chess-app:game-over:${gameId}`,
                 JSON.stringify({ game, moves })
             );
             await saveGameInDB(game, moves);
         } else
             return redisClient.publish(
-                `game-update:${gameId}`,
+                `chess-app:game-update:${gameId}`,
                 JSON.stringify({ game, moves })
             );
     } catch (err) {
@@ -400,7 +400,7 @@ export const onTimeout = async (socket: Socket, gameId: string) => {
                     true
                 );
             redisClient.publish(
-                `game-over:${gameId}`,
+                `chess-app:game-over:${gameId}`,
                 JSON.stringify({ game, moves })
             );
             await saveGameInDB(game, moves);
@@ -487,7 +487,7 @@ export const onResign = async (socket: Socket, gameId: string) => {
             );
 
         redisClient.publish(
-            `game-over:${gameId}`,
+            `chess-app:game-over:${gameId}`,
             JSON.stringify({ game, moves })
         );
         await saveGameInDB(game, moves);
@@ -566,8 +566,15 @@ export const onRequestDraw = async (socket: Socket, gameId: string) => {
                 true
             );
         if (game.whiteId === userId)
-            return redisClient.publish(`request-draw:${gameId}`, game.blackId);
-        else return redisClient.publish(`request-draw:${gameId}`, game.whiteId);
+            return redisClient.publish(
+                `chess-app:request-draw:${gameId}`,
+                game.blackId
+            );
+        else
+            return redisClient.publish(
+                `chess-app:request-draw:${gameId}`,
+                game.whiteId
+            );
     } catch (err) {
         socketEmit(
             socket,
@@ -660,7 +667,7 @@ export const onAcceptDraw = async (socket: Socket, gameId: string) => {
             );
 
         redisClient.publish(
-            `game-over:${gameId}`,
+            `chess-app:game-over:${gameId}`,
             JSON.stringify({ game, moves })
         );
         await saveGameInDB(game, moves);

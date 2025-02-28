@@ -80,7 +80,7 @@ export const onCreateLobby = async (socket: Socket) => {
         socketEmit(socket, "created-lobby", newLobbyId);
 
         redisClient.publish(
-            `lobby-update:${newLobbyId}`,
+            `chess-app:lobby-update:${newLobbyId}`,
             JSON.stringify(newLobby)
         );
     } catch (err) {
@@ -154,7 +154,10 @@ export const onJoinLobby = async (socket: Socket, lobbyId: string) => {
             );
         socket.join(lobbyId);
         socketEmit(socket, "joined-lobby");
-        redisClient.publish(`lobby-update:${lobbyId}`, JSON.stringify(lobby));
+        redisClient.publish(
+            `chess-app:lobby-update:${lobbyId}`,
+            JSON.stringify(lobby)
+        );
     } catch (err) {
         socketEmit(socket, "join-lobby-error", "Failed to join lobby", true);
         console.error("Error during joining lobby:", err);
@@ -188,7 +191,7 @@ export const onMatchSelect = async (
                 `Lobby with ID ${lobbyId} does not exist`,
                 true
             );
-        redisClient.publish(`match-select:${lobbyId}`, matchType);
+        redisClient.publish(`chess-app:match-select:${lobbyId}`, matchType);
     } catch (err) {
         socketEmit(
             socket,

@@ -10,20 +10,20 @@ export const onSubscribePMessage = async (
 ) => {
     try {
         // lobby-update
-        if (channel.startsWith("lobby-update")) {
-            const lobbyId = channel.split(":")[1];
+        if (channel.startsWith("chess-app:lobby-update")) {
+            const lobbyId = channel.split(":")[2];
             const lobby: lobbyType = JSON.parse(message);
 
             socketEmitRoom(io, lobbyId, "lobby-details", lobby);
         }
         // match-select
-        else if (channel.startsWith("match-select")) {
-            const lobbyId = channel.split(":")[1];
+        else if (channel.startsWith("chess-app:match-select")) {
+            const lobbyId = channel.split(":")[2];
             const matchType = message;
             socketEmitRoom(io, lobbyId, "match-select", matchType);
         }
         // started-game
-        else if (channel.startsWith("started-game")) {
+        else if (channel.startsWith("chess-app:started-game")) {
             const { gameId, lobbyId, whiteSocketId, blackSocketId } =
                 JSON.parse(message);
 
@@ -41,8 +41,8 @@ export const onSubscribePMessage = async (
             socketEmitRoom(io, gameId, "started-game", gameId);
         }
         // game-over
-        else if (channel.startsWith("game-over")) {
-            const gameId = channel.split(":")[1];
+        else if (channel.startsWith("chess-app:game-over")) {
+            const gameId = channel.split(":")[2];
             const { game, moves }: { game: gameType; moves: movesType } =
                 JSON.parse(message);
 
@@ -52,8 +52,8 @@ export const onSubscribePMessage = async (
             });
         }
         // game-update
-        else if (channel.startsWith("game-update")) {
-            const gameId = channel.split(":")[1];
+        else if (channel.startsWith("chess-app:game-update")) {
+            const gameId = channel.split(":")[2];
             const { game, moves }: { game: gameType; moves: movesType } =
                 JSON.parse(message);
 
@@ -63,8 +63,8 @@ export const onSubscribePMessage = async (
             });
         }
         // request-draw
-        else if (channel.startsWith("request-draw")) {
-            const gameId = channel.split(":")[1];
+        else if (channel.startsWith("chess-app:request-draw")) {
+            const gameId = channel.split(":")[2];
             const userId = message;
             const socketId = await redisClient.get(
                 `chess-app:userId:${userId}:socketId`

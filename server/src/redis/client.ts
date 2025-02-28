@@ -25,12 +25,12 @@ export const redisSubscriber = new Redis({
     port: Number(REDIS_PORT as string),
 });
 
-redisSubscriber.psubscribe("lobby-update:*");
-redisSubscriber.psubscribe("match-select:*");
-redisSubscriber.psubscribe("started-game:*");
-redisSubscriber.psubscribe("game-update:*");
-redisSubscriber.psubscribe("game-over:*");
-redisSubscriber.psubscribe("request-draw:*");
+redisSubscriber.psubscribe("chess-app:lobby-update:*");
+redisSubscriber.psubscribe("chess-app:match-select:*");
+redisSubscriber.psubscribe("chess-app:started-game:*");
+redisSubscriber.psubscribe("chess-app:game-update:*");
+redisSubscriber.psubscribe("chess-app:game-over:*");
+redisSubscriber.psubscribe("chess-app:request-draw:*");
 
 redisSubscriber.on("pmessage", onSubscribePMessage);
 
