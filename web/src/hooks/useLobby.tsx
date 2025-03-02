@@ -1,9 +1,15 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { socket } from "../socket/main";
-import { useRecoilValue } from "recoil";
+import { useRecoilValue, useSetRecoilState } from "recoil";
 import { isRegisteredState, userDetailsState } from "../store/auth";
 import { lobbyType } from "../types/lobby";
+import {
+    errorDialogState,
+    isErrorDialogState,
+    isLoadingPageState,
+    loadingTextState,
+} from "@/store/page";
 
 const useLobby = () => {
     const userDetails = useRecoilValue(userDetailsState);
@@ -14,6 +20,10 @@ const useLobby = () => {
         null
     );
     const [startGameError, setStartGameError] = useState<string | null>(null);
+    const setLoadingText = useSetRecoilState(loadingTextState);
+    const setIsLoadingPage = useSetRecoilState(isLoadingPageState);
+    const setErrorDialog = useSetRecoilState(errorDialogState);
+    const setIsErrorDialog = useSetRecoilState(isErrorDialogState);
 
     const isRegisterd = useRecoilValue(isRegisteredState);
 
@@ -49,13 +59,24 @@ const useLobby = () => {
     useEffect(() => {
         if (lobbyId && isRegisterd) {
             socket.emit("join-lobby", lobbyId);
+            setLoadingText("Joining lobby");
+            setIsLoadingPage(true);
             socket.on("lobby-details", (lobby: lobbyType) => {
                 setLobbyDetailsError(null);
                 setLobbyDetails(lobby);
+                setIsLoadingPage(false);
             });
             socket.on("lobby-details-error", (msg: string) => {
                 setLobbyDetails(null);
                 setLobbyDetailsError(msg);
+                setIsErrorDialog(true);
+                setIsLoadingPage(false);
+                setErrorDialog(msg);
+            });
+            socket.on("join-lobby-error", (error: string) => {
+                setIsErrorDialog(true);
+                setIsLoadingPage(false);
+                setErrorDialog(error);
             });
         }
 

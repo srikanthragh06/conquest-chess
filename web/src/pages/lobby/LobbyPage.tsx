@@ -11,7 +11,6 @@ const LobbyPage = () => {
 
     const {
         lobbyDetails,
-        lobbyDetailsError,
         handleStartGame,
         startGameError,
         handleMatchTypeSelect,
@@ -25,11 +24,6 @@ const LobbyPage = () => {
             registeredRequired={true}
             className="items-center"
         >
-            {lobbyDetailsError && (
-                <p className="sm:text-xl text-lg mt-20 text-red-400 text-center">
-                    {lobbyDetailsError}
-                </p>
-            )}
             {lobbyDetails && (
                 <>
                     <p className="mt-10 sm:text-xl text-lg">

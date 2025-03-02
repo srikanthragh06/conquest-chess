@@ -1,8 +1,29 @@
 import { ReactNode } from "react";
-import Navbar from "./Navbar";
+import TitleBar from "./TitleBar";
 import useIsAuthPage from "../hooks/useIsAuthPage";
-import { useRecoilValue } from "recoil";
-import { isRegisteredState } from "../store/auth";
+import { useRecoilValue, useSetRecoilState } from "recoil";
+import Navbar from "./Navbar";
+import {
+    Drawer,
+    DrawerContent,
+    DrawerDescription,
+    DrawerTitle,
+    DrawerTrigger,
+} from "./ui/drawer";
+import { FiAlignJustify } from "react-icons/fi";
+import LoadingPage from "./LoadingPage";
+import {
+    errorDialogState,
+    isErrorDialogState,
+    isLoadingPageState,
+    isRegisteringState,
+} from "../store/page";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogTitle,
+} from "../components/ui/dialog";
 
 type MainPageProps = {
     children?: ReactNode;
@@ -17,31 +38,61 @@ const MainPage = ({
     children,
     className = "",
     hasNavbar,
-    registeredRequired,
     authRequired,
     noAuthRequired,
 }: MainPageProps) => {
-    const isRegisterd = useRecoilValue(isRegisteredState);
+    const isLoadingPage = useRecoilValue(isLoadingPageState);
+    const isRegistering = useRecoilValue(isRegisteringState);
+    const isErrorDialog = useRecoilValue(isErrorDialogState);
+    const setIsErrorDialog = useSetRecoilState(isErrorDialogState);
+    const errorDialog = useRecoilValue(errorDialogState);
 
     useIsAuthPage(authRequired, noAuthRequired);
 
+    if (isLoadingPage || isRegistering) return <LoadingPage />;
     return (
         <div
             className={`w-full h-full 
+                        flex flex-`}
+        >
+            <div className="lg:hidden">
+                {hasNavbar && (
+                    <Drawer direction="left">
+                        <DrawerTrigger>
+                            <FiAlignJustify
+                                className="text-3xl sm:text-4xl md:text-5xl mt-1
+                                                "
+                            />
+                        </DrawerTrigger>
+                        <DrawerContent className=" bg-zinc-900 border-none text-white shadow-lg w-[250px]">
+                            <DrawerTitle></DrawerTitle>
+                            <DrawerDescription></DrawerDescription>
+                            <Navbar />
+                        </DrawerContent>
+                    </Drawer>
+                )}
+            </div>
+            <div className="sticky top-0 left-0 hidden lg:block">
+                {hasNavbar && <Navbar />}
+            </div>
+            <div
+                className={`w-full h-full 
                         flex flex-col
                         overflow-x-hidden
                         ${className}`}
-        >
-            {hasNavbar && <Navbar />}
-            {registeredRequired ? (
-                isRegisterd ? (
-                    children
-                ) : (
-                    <p className="text-4xl">Client not registered</p>
-                )
-            ) : (
-                children
-            )}
+            >
+                {hasNavbar && <TitleBar />}
+                {children}
+                <Dialog
+                    open={isErrorDialog}
+                    onOpenChange={() => setIsErrorDialog(false)}
+                >
+                    <DialogContent className="bg-zinc-800 text-white border-none">
+                        <DialogTitle>Error</DialogTitle>
+                        <DialogDescription>{errorDialog}</DialogDescription>
+                    </DialogContent>
+                </Dialog>
+            </div>
         </div>
     );
 };

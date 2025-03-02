@@ -1,87 +1,103 @@
-import { FiAlignJustify } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { isLoggedInState, userDetailsState } from "@/store/auth";
 import { useRecoilState, useRecoilValue } from "recoil";
-import { isLoggedInState, isRegisteredState } from "../store/auth";
-import { removeAuthToken } from "../utils/token";
-import { socket } from "../socket/main";
-import { useEffect } from "react";
+import { FaChessKnight, FaRobot } from "react-icons/fa";
+import NavButton from "./NavButton";
+import { FaChess } from "react-icons/fa";
+import { BiSolidChess } from "react-icons/bi";
+import { FaChessKing } from "react-icons/fa";
+import { MdLogout } from "react-icons/md";
+import { CgProfile } from "react-icons/cg";
+import { IoIosSettings } from "react-icons/io";
+import { FaSearch } from "react-icons/fa";
+import { FaChessRook } from "react-icons/fa6";
+import { removeAuthToken } from "@/utils/token";
+import { useNavigate } from "react-router-dom";
+import useCreateLobby from "@/hooks/useCreateLobby";
 
 const Navbar = () => {
-    const navigate = useNavigate();
+    const userDetails = useRecoilValue(userDetailsState);
     const [isLoggedIn, setIsLoggedIn] = useRecoilState(isLoggedInState);
-    const isRegisterd = useRecoilValue(isRegisteredState);
+    const navigate = useNavigate();
 
     const handleLogOut = () => {
         removeAuthToken();
         setIsLoggedIn(false);
         navigate("/");
     };
-
-    const handleCreateLobby = () => {
-        if (!isRegisterd) return;
-        socket.emit("create-lobby");
-    };
-
-    useEffect(() => {
-        socket.on("created-lobby", (newLobbyId: string) => {
-            navigate(`/lobby/${newLobbyId}`);
-        });
-
-        return () => {
-            socket.off("created-lobby");
-        };
-    }, [navigate]);
+    const { handleCreateLobby } = useCreateLobby();
 
     return (
         <div
-            className="w-full flex justify-between items-center
-                        lg:px-6 md:px-8 px-2
-                        py-1
-                        border-"
+            className="flex flex-col h-screen border- bg-zinc-900 w-[300px] 
+                        py- space-y-3"
         >
-            <div
-                className="flex xl:space-x-96 lg:space-x-64 md:space-x-32 space-x-16
-                            border-"
-            >
-                <FiAlignJustify className="lg:text-5xl md:text-4xl text-3xl cursor-pointer hover:opacity-85 transition" />
-                <div
-                    className="cursor-pointer w-64 sm:block hidden almendra-sc-regular
-                                sm:text-2xl lg:text-4xl md:mt-1"
-                    onClick={() => navigate("/")}
-                >
-                    Conquest Chess
+            <div className="flex flex-col">
+                <div className="flex items-center justify-start space-x-5 border- px-4 py-4 relative">
+                    <Avatar className="w-[30px] h-[30px] text-sm">
+                        <AvatarImage src="https://github.com/shadcn.png" />
+                        <AvatarFallback>
+                            {userDetails.isGuest
+                                ? "G"
+                                : userDetails.id?.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                    </Avatar>
+
+                    <div className="text-sm">
+                        {userDetails.isGuest && (
+                            <span className="font-bold">Guest_</span>
+                        )}
+                        {userDetails.isGuest ? (
+                            <span>{userDetails.id}</span>
+                        ) : (
+                            <span className="font-bold">{userDetails.id}</span>
+                        )}
+                    </div>
                 </div>
             </div>
-            <div
-                className="flex md:space-x-8 space-x-3 justify-evenly
-                            w-auto sm:w-auto
-                            lg:text-xl md:text-lg text-base border-"
-            >
-                <button
-                    className=" bg-gray-700 border- 
-                                lg:px-4  px-3 py-1
-                                rounded-md 
-                                lg:text-lg md:text-base text-sm
-                                hover:opacity-50 active:opacity-30 transition"
+            <div className="flex flex-col text-base items-center">
+                <NavButton text="Queue match" icon={<FaChessKing />} />
+                <NavButton text="Play AI" icon={<FaRobot />} />
+                <NavButton
+                    text="Create Lobby"
+                    icon={<FaChess />}
                     onClick={() => {
                         handleCreateLobby();
                     }}
-                >
-                    Create Lobby
-                </button>
-                <button
-                    className=" bg-gray-700 border- 
-                                lg:px-4 px-3 py-1
-                                rounded-md 
-                                lg:text-lg md:text-base text-sm
-                                hover:opacity-50 active:opacity-30 transition"
-                    onClick={() => {
-                        if (isLoggedIn) handleLogOut();
-                        else navigate("/auth");
-                    }}
-                >
-                    {isLoggedIn ? "Log out" : "Log in"}
-                </button>
+                />
+                {/* <NavButton text="Join Lobby" icon={<FaChessBishop />} /> */}
+                <NavButton text="Spectate Game" icon={<BiSolidChess />} />
+                <NavButton text="Search Players" icon={<FaSearch />} />
+                {isLoggedIn && (
+                    <NavButton text="View Profile" icon={<CgProfile />} />
+                )}
+                {isLoggedIn && (
+                    <NavButton
+                        text="Account Settings"
+                        icon={<IoIosSettings />}
+                    />
+                )}
+                {!isLoggedIn && (
+                    <NavButton
+                        text="Log in"
+                        icon={<FaChessKnight />}
+                        onClick={() => navigate("/auth")}
+                    />
+                )}
+                {!isLoggedIn && (
+                    <NavButton
+                        text="Sign up"
+                        icon={<FaChessRook />}
+                        onClick={() => navigate("/auth")}
+                    />
+                )}
+                {isLoggedIn && (
+                    <NavButton
+                        onClick={handleLogOut}
+                        text="Log out"
+                        icon={<MdLogout />}
+                    />
+                )}
             </div>
         </div>
     );

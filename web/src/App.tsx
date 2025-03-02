@@ -26,7 +26,7 @@ function App() {
             className="w-full h-full min-h-screen
                         overflow-y-auto
                         flex flex-col items-center
-                        text-3xl  bg-gray-950 text-white"
+                        text-3xl bg-black text-white"
         >
             <RouterProvider router={createBrowserRouter(appRouter)} />
         </div>
