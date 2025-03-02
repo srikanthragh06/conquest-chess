@@ -1,4 +1,5 @@
 // import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import MainPage from "../../components/MainPage";
 import JoinLobby from "./JoinLobby";
 // import { io, Socket } from "socket.io-client";
@@ -54,6 +55,7 @@ const HomePage = () => {
             registeredRequired={false}
             className="items-center"
         >
+            <Button>Click me</Button>
             {/* <div className="w-screen h-screen flex flex-col items-center bg-black">
                 {isGameStarted && gameData ? (
                     <ChessGame2
