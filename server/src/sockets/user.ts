@@ -1,164 +1,140 @@
 import { Socket } from "socket.io";
-import { transaction } from "../db/postgres";
-import { findOneWithCondition, updateRecords } from "../db/queries";
 import { socketEmit } from "../utils/responseTemplates";
 import jwt from "jsonwebtoken";
-import { redisClient } from "../redis/client";
-import { gameType } from "../type/state";
+import {
+    addUser2SocketList,
+    createGuestInRedis,
+    handleJoinOldGame,
+    handleRegisteredUser,
+    verifyGuestIdInJWT,
+} from "../helpers/auth";
+import { JwtPayload } from "jsonwebtoken";
 
-const handleGuestUser = async (decodedToken: any): Promise<string> => {
-    const { guestId } = decodedToken;
-    if (!guestId) {
-        throw new Error("Invalid auth token, user not found");
-    }
-
-    const guestJSON = await redisClient.get(
-        `chess-app:guestId:${guestId}:guest`
-    );
-    if (!guestJSON) {
-        throw new Error("Invalid auth token, user not found");
-    }
-
-    return `Guest_${guestId}`;
-};
-
-// Handle registered user registration
-const handleRegisteredUser = async (decodedToken: any): Promise<string> => {
-    const { username, updatePasswordToken } = decodedToken;
-
-    if (!username || !updatePasswordToken) {
-        throw new Error("Invalid auth token, user not found");
-    }
-
-    await transaction(async (client) => {
-        const user = await findOneWithCondition(client, "Users", null, {
-            username,
-        });
-
-        if (!user) {
-            throw new Error("Invalid auth token, user not found");
-        }
-
-        if (updatePasswordToken !== user.update_password_token) {
-            throw new Error("Please sign in with your new password");
-        }
-
-        await updateRecords(
-            client,
-            "Users",
-            { last_active: new Date() },
-            { username }
-        );
-    });
-
-    return username;
-};
-
-export const handleJoinOldGame = async (socket: Socket, userId: string) => {
-    const gameId = await redisClient.get(`chess-app:userId:${userId}:gameId`);
-    if (gameId) {
-        const gameJSON = await redisClient.get(
-            `chess-app:gameId:${gameId}:game`
-        );
-        if (gameJSON) {
-            const game: gameType = JSON.parse(gameJSON);
-
-            if (game.gameStatus.status === "playing") {
-                socket.join(gameId);
-            }
-        }
-    }
-};
-
-export const onRegisterUser = async (jwtToken: string, socket: Socket) => {
+export const onRegisterUser = async (authToken: string, socket: Socket) => {
     try {
-        if (!jwtToken) {
-            return socketEmit(
-                socket,
-                "register-user-error",
-                "No JWT token provided",
-                true
-            );
-        }
-
-        let decodedToken: any;
-
-        try {
-            decodedToken = jwt.verify(
-                jwtToken,
-                process.env.JWT_SECRET_KEY as string
-            );
-        } catch (error) {
-            const errorMessage =
-                error instanceof jwt.TokenExpiredError
-                    ? "Token expired"
-                    : error instanceof jwt.JsonWebTokenError
-                    ? "Invalid Authentication Token"
-                    : "Unable to parse auth-token";
-            return socketEmit(
-                socket,
-                "register-user-error",
-                errorMessage,
-                true
-            );
-        }
-
-        const { isGuest } = decodedToken;
-        if (isGuest === undefined) {
-            return socketEmit(
-                socket,
-                "register-user-error",
-                "Invalid Authentication Token",
-                true
-            );
-        }
-
         let userId: string;
+        let newAuthToken: string;
+        let isGuest: boolean;
 
-        try {
-            if (isGuest) {
-                userId = await handleGuestUser(decodedToken);
-            } else {
-                userId = await handleRegisteredUser(decodedToken);
-            }
-        } catch (error: any) {
-            console.error(error);
-            return socketEmit(
-                socket,
-                "register-user-error",
-                "Server Error",
-                true
+        // If no JWT token, create a guest
+        if (!authToken) {
+            userId = await createGuestInRedis();
+            isGuest = true;
+            newAuthToken = jwt.sign(
+                { userId, isGuest: true },
+                process.env.JWT_SECRET_KEY as string,
+                { expiresIn: "168h" }
             );
+            console.log("nojwttoken");
+        } else {
+            let decodedToken: JwtPayload | string | null = null;
+
+            try {
+                decodedToken = jwt.verify(
+                    authToken,
+                    process.env.JWT_SECRET_KEY as string
+                ) as JwtPayload;
+            } catch (error) {
+                if (error instanceof jwt.TokenExpiredError) {
+                    // Try extracting the expired token data
+                    try {
+                        decodedToken = jwt.decode(authToken) as JwtPayload;
+                    } catch {
+                        return socketEmit(
+                            socket,
+                            "register-user-error",
+                            "Invalid Authentication Token",
+                            true
+                        );
+                    }
+
+                    if (!decodedToken || decodedToken.isGuest === undefined) {
+                        return socketEmit(
+                            socket,
+                            "register-user-error",
+                            "Invalid Authentication Token",
+                            true
+                        );
+                    }
+
+                    if (!decodedToken.isGuest) {
+                        return socketEmit(
+                            socket,
+                            "register-user-error",
+                            "Authentication token expired, please log in again",
+                            true
+                        );
+                    }
+
+                    // Guest token expired, create a new guest
+                    userId = await createGuestInRedis();
+                    isGuest = true;
+                    newAuthToken = jwt.sign(
+                        { userId, isGuest: true },
+                        process.env.JWT_SECRET_KEY as string,
+                        { expiresIn: "168h" }
+                    );
+                } else {
+                    return socketEmit(
+                        socket,
+                        "register-user-error",
+                        "Invalid Authentication Token",
+                        true
+                    );
+                }
+            }
+            // Ensure token is valid
+            if (
+                !decodedToken ||
+                typeof decodedToken === "string" ||
+                decodedToken.isGuest === undefined
+            )
+                return socketEmit(
+                    socket,
+                    "register-user-error",
+                    "Invalid Authentication Token",
+                    true
+                );
+
+            // Handle guest authentication
+            if (decodedToken.isGuest) {
+                isGuest = true;
+                const guestId = await verifyGuestIdInJWT(decodedToken);
+                console.log("verifyGuestId", { guestId });
+                if (guestId) {
+                    userId = guestId;
+                    newAuthToken = authToken;
+                } else {
+                    userId = await createGuestInRedis();
+                    newAuthToken = jwt.sign(
+                        { userId, isGuest: true },
+                        process.env.JWT_SECRET_KEY as string,
+                        { expiresIn: "168h" }
+                    );
+                }
+            } else {
+                // Handle registered user authentication
+                userId = await handleRegisteredUser(decodedToken);
+                isGuest = false;
+                newAuthToken = authToken;
+            }
         }
 
-        const oldUserId = await redisClient.get(
-            `chess-app:socketId:${socket.id}:userId`
-        );
+        // Add user to socket list
+        await addUser2SocketList(userId, socket);
 
-        const tx = redisClient.multi();
-
-        if (oldUserId) {
-            tx.del(`chess-app:userId:${oldUserId}:socketId`);
-            tx.del(`chess-app:socketId:${socket.id}:userId`);
-        }
-
-        tx.set(`chess-app:socketId:${socket.id}:userId`, userId);
-        tx.set(`chess-app:userId:${userId}:socketId`, socket.id);
-
+        // Handle joining old games
         await handleJoinOldGame(socket, userId);
 
-        const result = await tx.exec();
-        if (!result)
-            return socketEmit(
-                socket,
-                "register-user-error",
-                "Register user failed due to conflict",
-                true
-            );
-
-        socketEmit(socket, "registered-user");
+        // Emit success response
+        return socketEmit(socket, "registered-user", {
+            authToken: newAuthToken,
+            userId,
+            isGuest,
+        });
     } catch (err) {
         console.error(err);
-        return socketEmit(socket, "register-user-error", "Server Error", true);
+        const errorMessage = (err as Error)?.message || "Server error";
+        return socketEmit(socket, "register-user-error", errorMessage, true);
     }
 };

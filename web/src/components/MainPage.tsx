@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 import TitleBar from "./TitleBar";
-import useIsAuthPage from "../hooks/useIsAuthPage";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import Navbar from "./Navbar";
 import {
@@ -14,6 +13,7 @@ import { FiAlignJustify } from "react-icons/fi";
 import LoadingPage from "./LoadingPage";
 import {
     errorDialogState,
+    errorTitleState,
     isErrorDialogState,
     isLoadingPageState,
     isRegisteringState,
@@ -30,24 +30,15 @@ type MainPageProps = {
     className?: string;
     hasNavbar: boolean;
     registeredRequired: boolean;
-    authRequired: boolean;
-    noAuthRequired: boolean;
 };
 
-const MainPage = ({
-    children,
-    className = "",
-    hasNavbar,
-    authRequired,
-    noAuthRequired,
-}: MainPageProps) => {
+const MainPage = ({ children, className = "", hasNavbar }: MainPageProps) => {
     const isLoadingPage = useRecoilValue(isLoadingPageState);
     const isRegistering = useRecoilValue(isRegisteringState);
     const isErrorDialog = useRecoilValue(isErrorDialogState);
     const setIsErrorDialog = useSetRecoilState(isErrorDialogState);
     const errorDialog = useRecoilValue(errorDialogState);
-
-    useIsAuthPage(authRequired, noAuthRequired);
+    const errorTitle = useRecoilValue(errorTitleState);
 
     if (isLoadingPage || isRegistering) return <LoadingPage />;
     return (
@@ -88,7 +79,7 @@ const MainPage = ({
                     onOpenChange={() => setIsErrorDialog(false)}
                 >
                     <DialogContent className="bg-zinc-800 text-white border-none">
-                        <DialogTitle>Error</DialogTitle>
+                        <DialogTitle>{errorTitle}</DialogTitle>
                         <DialogDescription>{errorDialog}</DialogDescription>
                     </DialogContent>
                 </Dialog>

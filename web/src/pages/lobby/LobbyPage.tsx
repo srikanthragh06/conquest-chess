@@ -1,12 +1,11 @@
 import MainPage from "../../components/MainPage";
 import FormButton from "../../components/FormButton";
 import { useRecoilValue } from "recoil";
-import { isLoggedInState, userDetailsState } from "../../store/auth";
+import { userDetailsState } from "../../store/auth";
 import useLobby from "../../hooks/useLobby";
 import FormError from "../../components/FormError";
 
 const LobbyPage = () => {
-    const isLoggedIn = useRecoilValue(isLoggedInState);
     const userDetails = useRecoilValue(userDetailsState);
 
     const {
@@ -19,8 +18,6 @@ const LobbyPage = () => {
     return (
         <MainPage
             hasNavbar={true}
-            authRequired={false}
-            noAuthRequired={false}
             registeredRequired={true}
             className="items-center"
         >
@@ -29,15 +26,15 @@ const LobbyPage = () => {
                     <p className="mt-10 sm:text-xl text-lg">
                         <>
                             <span>Playing as</span>{" "}
-                            {isLoggedIn ? (
+                            {userDetails.isGuest ? (
+                                <>
+                                    <span className="font-bold">Guest_</span>
+                                    {userDetails.id?.slice(6) || ""}
+                                </>
+                            ) : (
                                 <span className="font-bold">
                                     {userDetails.id || ""}
                                 </span>
-                            ) : (
-                                <>
-                                    <span className="font-bold">Guest</span>_
-                                    {userDetails.id}
-                                </>
                             )}
                         </>
                     </p>
@@ -71,12 +68,8 @@ const LobbyPage = () => {
                                     key={type}
                                     className={`text-base px-2 py-1 rounded-lg transition 
                                                 bg-gray-700 ${
-                                                    (userDetails.isGuest
-                                                        ? lobbyDetails.hostId ===
-                                                          "Guest_" +
-                                                              userDetails.id
-                                                        : lobbyDetails.hostId ===
-                                                          userDetails.id) &&
+                                                    lobbyDetails.hostId ===
+                                                        userDetails.id &&
                                                     "cursor-pointer"
                                                 }
                                     ${
@@ -108,11 +101,7 @@ const LobbyPage = () => {
                             isActive={
                                 lobbyDetails
                                     ? lobbyDetails.players.length === 2 &&
-                                      (userDetails.isGuest
-                                          ? lobbyDetails.hostId ===
-                                            "Guest_" + userDetails.id
-                                          : lobbyDetails.hostId ===
-                                            userDetails.id)
+                                      lobbyDetails.hostId === userDetails.id
                                     : false
                             }
                             onClick={(e) => handleStartGame(e)}

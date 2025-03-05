@@ -6,6 +6,7 @@ import { isRegisteredState, userDetailsState } from "../store/auth";
 import { lobbyType } from "../types/lobby";
 import {
     errorDialogState,
+    errorTitleState,
     isErrorDialogState,
     isLoadingPageState,
     loadingTextState,
@@ -23,6 +24,7 @@ const useLobby = () => {
     const setLoadingText = useSetRecoilState(loadingTextState);
     const setIsLoadingPage = useSetRecoilState(isLoadingPageState);
     const setErrorDialog = useSetRecoilState(errorDialogState);
+    const setErrorTitle = useSetRecoilState(errorTitleState);
     const setIsErrorDialog = useSetRecoilState(isErrorDialogState);
 
     const isRegisterd = useRecoilValue(isRegisteredState);
@@ -37,12 +39,7 @@ const useLobby = () => {
     };
 
     const handleMatchTypeSelect = (type: "Blitz" | "Rapid" | "Bullet") => {
-        if (
-            lobbyDetails &&
-            (userDetails.isGuest
-                ? lobbyDetails.hostId === "Guest_" + userDetails.id
-                : lobbyDetails.hostId === userDetails.id)
-        ) {
+        if (lobbyDetails && lobbyDetails.hostId === userDetails.id) {
             if (lobbyDetails) {
                 setLobbyDetails((prev) => {
                     if (!prev) return prev;
@@ -72,11 +69,13 @@ const useLobby = () => {
                 setIsErrorDialog(true);
                 setIsLoadingPage(false);
                 setErrorDialog(msg);
+                setErrorTitle("Lobby Error");
             });
             socket.on("join-lobby-error", (error: string) => {
                 setIsErrorDialog(true);
                 setIsLoadingPage(false);
                 setErrorDialog(error);
+                setErrorTitle("Join Lobby Error");
             });
         }
 

@@ -20,9 +20,7 @@ const LoadingPage = () => {
                 <div className="w-screen h-screen flex justify-center items-center">
                     <div className="flex flex-col items-center space-y-6">
                         <div className="text-base">
-                            {isRegistering
-                                ? "Connecting to Server"
-                                : loadingText}
+                            {isRegistering ? "Authorizing client" : loadingText}
                             ...
                         </div>
                         <Loader className="text-5xl font-bold" />

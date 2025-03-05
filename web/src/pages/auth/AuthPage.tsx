@@ -9,8 +9,6 @@ const AuthPage = () => {
     return (
         <MainPage
             hasNavbar={false}
-            authRequired={false}
-            noAuthRequired={true}
             registeredRequired={false}
             className="items-center justify-center"
         >

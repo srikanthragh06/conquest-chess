@@ -35,11 +35,8 @@ const ChessGame = () => {
     const isRegistered = useRecoilValue(isRegisteredState);
 
     const isUserPlayer = game
-        ? userDetails.isGuest
-            ? [`Guest_${userDetails.id}`].includes(game?.whiteId) ||
-              [`Guest_${userDetails.id}`].includes(game?.blackId)
-            : [userDetails.id].includes(game?.whiteId) ||
-              [userDetails.id].includes(game?.blackId)
+        ? [userDetails.id].includes(game?.whiteId) ||
+          [userDetails.id].includes(game?.blackId)
         : false;
 
     return (
@@ -114,13 +111,7 @@ const ChessGame = () => {
                     onPieceDrop={handlePieceDrop}
                     onSquareClick={handleSquareClick}
                     boardOrientation={
-                        userDetails.isGuest
-                            ? `Guest_${userDetails.id}` === game?.whiteId
-                                ? "white"
-                                : "black"
-                            : userDetails.id === game?.whiteId
-                            ? "white"
-                            : "black"
+                        userDetails.id === game?.whiteId ? "white" : "black"
                     }
                     customBoardStyle={{
                         borderRadius: "4px",

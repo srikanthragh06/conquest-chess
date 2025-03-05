@@ -83,7 +83,7 @@ export const signupHandler = async (
 
             const jwtToken = jwt.sign(
                 {
-                    username: newUser.username,
+                    userId: newUser.username,
                     updatePasswordToken: newUser.update_password_token,
                     isGuest: false,
                 },
@@ -145,7 +145,7 @@ export const loginHandler = async (
 
             const jwtToken = jwt.sign(
                 {
-                    username: user.username,
+                    userId: user.username,
                     updatePasswordToken: user.update_password_token,
                     isGuest: false,
                 },
@@ -169,70 +169,6 @@ export const loginHandler = async (
                 }
             );
         });
-    } catch (err) {
-        next(err);
-    }
-};
-
-export const createGuestHandler = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-) => {
-    try {
-        const generateGuestId = () => {
-            return crypto.randomBytes(12).toString("base64url").slice(0, 16);
-        };
-
-        let newGuestId: string;
-        let guestIdExists = true;
-        do {
-            newGuestId = generateGuestId();
-
-            const guestJSON = await redisClient.get(
-                `chess-app:guestId:${newGuestId}:guest`
-            );
-            guestIdExists = guestJSON ? true : false;
-        } while (guestIdExists);
-
-        const newGuest: guestType = {
-            guestId: newGuestId,
-            createdAt: Date.now(),
-        };
-
-        const tx = redisClient.multi();
-
-        tx.set(
-            `chess-app:guestId:${newGuestId}:guest`,
-            JSON.stringify(newGuest)
-        );
-        tx.expire(`chess-app:guestId:${newGuestId}:guest`, 7 * 24 * 60 * 60);
-
-        const jwtToken = jwt.sign(
-            {
-                guestId: newGuestId,
-                isGuest: true,
-            },
-            process.env.JWT_SECRET_KEY as string,
-            { expiresIn: "48h" }
-        );
-
-        const result = await tx.exec();
-        if (!result)
-            return sendServerSideError(
-                req,
-                res,
-                new Error("Something went wrong!"),
-                500
-            );
-        return sendSuccessResponse(
-            req,
-            res,
-            `Guest: ${newGuestId} registered successfully`,
-            201,
-
-            { jwtToken, user: { guestId: newGuest.guestId } }
-        );
     } catch (err) {
         next(err);
     }

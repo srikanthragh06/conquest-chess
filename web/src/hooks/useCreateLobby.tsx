@@ -3,6 +3,7 @@ import { socket } from "../socket/main";
 import { useEffect } from "react";
 import {
     errorDialogState,
+    errorTitleState,
     isErrorDialogState,
     isLoadingPageState,
 } from "@/store/page";
@@ -16,6 +17,7 @@ const useCreateLobby = () => {
     const setIsLoadingPage = useSetRecoilState(isLoadingPageState);
     const setIsErrorDialog = useSetRecoilState(isErrorDialogState);
     const setErrorDialog = useSetRecoilState(errorDialogState);
+    const setErrorTitle = useSetRecoilState(errorTitleState);
 
     const navigate = useNavigate();
 
@@ -37,6 +39,7 @@ const useCreateLobby = () => {
             setIsErrorDialog(true);
             setIsLoadingPage(false);
             setErrorDialog(error);
+            setErrorTitle("Create Lobby Error");
         });
 
         return () => {

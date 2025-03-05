@@ -33,9 +33,7 @@ const useGame = () => {
     const [inPast, setInPast] = useState(false);
 
     const isValidTurn = () => {
-        const userId = userDetails.isGuest
-            ? `Guest_${userDetails.id}`
-            : userDetails.id;
+        const userId = userDetails.id;
 
         return (
             (userId === game?.whiteId && board.turn() === "w") ||
@@ -108,11 +106,8 @@ const useGame = () => {
         if (!isValidTurn()) return;
         if (game && game.gameStatus.status !== "playing") return;
         const isUserPlayer = game
-            ? userDetails.isGuest
-                ? [`Guest_${userDetails.id}`].includes(game?.whiteId) ||
-                  [`Guest_${userDetails.id}`].includes(game?.blackId)
-                : [userDetails.id].includes(game?.whiteId) ||
-                  [userDetails.id].includes(game?.blackId)
+            ? [userDetails.id].includes(game?.whiteId) ||
+              [userDetails.id].includes(game?.blackId)
             : false;
         if (!isUserPlayer) return;
         if (inPast) return;

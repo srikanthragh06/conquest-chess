@@ -4,8 +4,6 @@ const NotFoundPage = () => {
     return (
         <MainPage
             hasNavbar={false}
-            authRequired={false}
-            noAuthRequired={false}
             registeredRequired={false}
             className="items-center justify-center"
         >

@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { isLoggedInState, userDetailsState } from "@/store/auth";
-import { useRecoilState, useRecoilValue } from "recoil";
+import { userDetailsState } from "@/store/auth";
+import { useRecoilValue, useSetRecoilState } from "recoil";
 import { FaChessKnight, FaRobot } from "react-icons/fa";
 import NavButton from "./NavButton";
 import { FaChess } from "react-icons/fa";
@@ -17,13 +17,12 @@ import useCreateLobby from "@/hooks/useCreateLobby";
 
 const Navbar = () => {
     const userDetails = useRecoilValue(userDetailsState);
-    const [isLoggedIn, setIsLoggedIn] = useRecoilState(isLoggedInState);
+    const setUserDetails = useSetRecoilState(userDetailsState);
     const navigate = useNavigate();
 
     const handleLogOut = () => {
         removeAuthToken();
-        setIsLoggedIn(false);
-        navigate("/");
+        setUserDetails({ id: null, isGuest: false });
     };
     const { handleCreateLobby } = useCreateLobby();
 
@@ -44,14 +43,7 @@ const Navbar = () => {
                     </Avatar>
 
                     <div className="text-sm">
-                        {userDetails.isGuest && (
-                            <span className="font-bold">Guest_</span>
-                        )}
-                        {userDetails.isGuest ? (
-                            <span>{userDetails.id}</span>
-                        ) : (
-                            <span className="font-bold">{userDetails.id}</span>
-                        )}
+                        <span className="font-bold">{userDetails.id}</span>
                     </div>
                 </div>
             </div>
@@ -65,33 +57,32 @@ const Navbar = () => {
                         handleCreateLobby();
                     }}
                 />
-                {/* <NavButton text="Join Lobby" icon={<FaChessBishop />} /> */}
                 <NavButton text="Spectate Game" icon={<BiSolidChess />} />
                 <NavButton text="Search Players" icon={<FaSearch />} />
-                {isLoggedIn && (
+                {userDetails.id && !userDetails.isGuest && (
                     <NavButton text="View Profile" icon={<CgProfile />} />
                 )}
-                {isLoggedIn && (
+                {userDetails.id && !userDetails.isGuest && (
                     <NavButton
                         text="Account Settings"
                         icon={<IoIosSettings />}
                     />
                 )}
-                {!isLoggedIn && (
+                {userDetails.id && userDetails.isGuest && (
                     <NavButton
                         text="Log in"
                         icon={<FaChessKnight />}
                         onClick={() => navigate("/auth")}
                     />
                 )}
-                {!isLoggedIn && (
+                {userDetails.id && userDetails.isGuest && (
                     <NavButton
                         text="Sign up"
                         icon={<FaChessRook />}
                         onClick={() => navigate("/auth")}
                     />
                 )}
-                {isLoggedIn && (
+                {userDetails.id && !userDetails.isGuest && (
                     <NavButton
                         onClick={handleLogOut}
                         text="Log out"

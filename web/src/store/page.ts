@@ -19,6 +19,10 @@ export const isErrorDialogState = atom({
     key: "isErrorDialog",
     default: false,
 });
+export const errorTitleState = atom({
+    key: "errorTitle",
+    default: "",
+});
 export const errorDialogState = atom({
     key: "errorDialog",
     default: "",
