@@ -4,13 +4,12 @@ import { loginWithEmailApi, loginWithUsernameApi } from "../api/auth";
 import { AxiosResponse } from "axios";
 import { useNavigate } from "react-router-dom";
 import { useSetRecoilState } from "recoil";
-import { isLoggedInState, userDetailsState } from "../store/auth";
+import { userDetailsState } from "../store/auth";
 import { setAuthToken } from "../utils/token";
 
 const useLogin = () => {
     const navigate = useNavigate();
 
-    const setIsLoggedIn = useSetRecoilState(isLoggedInState);
     const setUserDetails = useSetRecoilState(userDetailsState);
 
     const [usermail, setUsermail] = useState("");
@@ -21,7 +20,7 @@ const useLogin = () => {
     const [isLoginLoading, setIsLoginLoading] = useState(false);
 
     const resetAuthState = () => {
-        setIsLoggedIn(false);
+        setUserDetails({ id: null, isGuest: false });
     };
 
     const handleLogin = async (e: FormEvent) => {
@@ -37,18 +36,10 @@ const useLogin = () => {
 
             if (res) {
                 if (!res.data?.error) {
-                    if (res.data.user.isGuest)
-                        setUserDetails({
-                            id: res.data.user.guestId,
-                            isGuest: true,
-                        });
-                    else
-                        setUserDetails({
-                            id: res.data.user.username,
-                            isGuest: false,
-                        });
-
-                    setIsLoggedIn(true);
+                    setUserDetails({
+                        id: res.data.user.username,
+                        isGuest: false,
+                    });
                     setAuthToken(res.data.jwtToken);
 
                     setLoginError("");

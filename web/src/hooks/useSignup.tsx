@@ -2,13 +2,12 @@ import { FormEvent, useState } from "react";
 import { signupApi } from "../api/auth";
 import { useNavigate } from "react-router-dom";
 import { useSetRecoilState } from "recoil";
-import { isLoggedInState, userDetailsState } from "../store/auth";
+import { userDetailsState } from "../store/auth";
 import { setAuthToken } from "../utils/token";
 
 const useSignup = () => {
     const navigate = useNavigate();
 
-    const setIsLoggedIn = useSetRecoilState(isLoggedInState);
     const setUserDetails = useSetRecoilState(userDetailsState);
 
     const [username, setUsername] = useState("");
@@ -21,7 +20,7 @@ const useSignup = () => {
     const [isSignupLoading, setIsSignupLoading] = useState(false);
 
     const resetAuthState = () => {
-        setIsLoggedIn(false);
+        setUserDetails({ id: null, isGuest: false });
     };
 
     const handleSignup = async (e: FormEvent) => {
@@ -49,18 +48,10 @@ const useSignup = () => {
 
             if (res) {
                 if (!res.data?.error) {
-                    if (res.data.user.isGuest)
-                        setUserDetails({
-                            id: res.data.user.guestId,
-                            isGuest: true,
-                        });
-                    else
-                        setUserDetails({
-                            id: res.data.user.username,
-                            isGuest: false,
-                        });
-
-                    setIsLoggedIn(true);
+                    setUserDetails({
+                        id: res.data.user.username,
+                        isGuest: false,
+                    });
                     setAuthToken(res.data.jwtToken);
                     setSignupError("");
                     navigate("/");
