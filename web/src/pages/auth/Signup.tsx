@@ -1,7 +1,8 @@
-import FormInput from "../../components/FormInput";
-import FormButton from "../../components/FormButton";
 import useSignup from "../../hooks/useSignup";
 import FormError from "../../components/FormError";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import Loader from "../../components/Loader";
 
 const Signup = ({
     setIsLogin,
@@ -33,41 +34,50 @@ const Signup = ({
                     flex flex-col items-center space-y-4"
             >
                 <div className="w-full flex flex-col items-center space-y-2 ">
-                    <FormInput
-                        inputState={email}
-                        setInputState={setEmail}
+                    <Input
+                        type="email"
+                        className="sm:w-3/4 w-5/6"
                         placeholder="Email Address"
-                        className="sm:w-3/4 w-5/6"
+                        value={email}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            setEmail(e.target.value)
+                        }
                     />
-                    <FormInput
-                        inputState={username}
-                        setInputState={setUsername}
+                    <Input
+                        type="text"
+                        className="sm:w-3/4 w-5/6"
                         placeholder="Username"
-                        className="sm:w-3/4 w-5/6"
+                        value={username}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            setUsername(e.target.value)
+                        }
                     />
-                    <FormInput
-                        inputState={password}
-                        setInputState={setPassword}
+                    <Input
+                        type="password"
+                        className="sm:w-3/4 w-5/6"
                         placeholder="Password"
-                        type="password"
-                        className="sm:w-3/4 w-5/6"
+                        value={password}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            setPassword(e.target.value)
+                        }
                     />
-                    <FormInput
-                        inputState={confirmPassword}
-                        setInputState={setConfirmPassword}
-                        placeholder="Confirm Password"
+                    <Input
                         type="password"
                         className="sm:w-3/4 w-5/6"
+                        placeholder="Confirm Password"
+                        value={confirmPassword}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            setConfirmPassword(e.target.value)
+                        }
                     />
                 </div>
                 <FormError>{signupError}</FormError>
-                <FormButton
+                <Button
                     onClick={(e) => handleSignup(e)}
-                    isLoading={isSignupLoading}
-                    className=" bg-gray-700 sm:w-3/4 w-5/6"
+                    className=" bg-zinc-800 sm:w-3/4 w-5/6"
                 >
-                    Register
-                </FormButton>
+                    {isSignupLoading ? <Loader /> : "Sign up"}
+                </Button>
             </form>
             <p className="text-sm text-gray-400">
                 Already have an account?{" "}

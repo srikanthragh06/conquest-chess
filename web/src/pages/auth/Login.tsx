@@ -1,7 +1,9 @@
-import FormInput from "../../components/FormInput";
-import FormButton from "../../components/FormButton";
 import useLogin from "../../hooks/useLogin";
 import FormError from "../../components/FormError";
+import { Input } from "@/components/ui/input";
+import React from "react";
+import { Button } from "@/components/ui/button";
+import Loader from "../../components/Loader";
 
 const Login = ({
     setIsLogin,
@@ -30,28 +32,32 @@ const Login = ({
                                 flex flex-col items-center space-y-4"
             >
                 <div className="w-full flex flex-col items-center space-y-2 ">
-                    <FormInput
-                        inputState={usermail}
-                        setInputState={setUsermail}
+                    <Input
+                        type="text"
+                        className="sm:w-3/4 w-5/6"
                         placeholder="Username or Email Address"
-                        className="sm:w-3/4 w-5/6"
+                        value={usermail}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            setUsermail(e.target.value)
+                        }
                     />
-                    <FormInput
-                        inputState={password}
-                        setInputState={setPassword}
-                        placeholder="Password"
+                    <Input
                         type="password"
-                        className="sm:w-3/4 w-5/6"
+                        className="sm:w-3/4 w-5/6 "
+                        placeholder="Password"
+                        value={password}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            setPassword(e.target.value)
+                        }
                     />
                 </div>
                 <FormError>{loginError}</FormError>
-                <FormButton
-                    isLoading={isLoginLoading}
+                <Button
                     onClick={(e) => handleLogin(e)}
-                    className=" bg-gray-700 sm:w-3/4 w-5/6"
+                    className=" bg-zinc-800 sm:w-3/4 w-5/6"
                 >
-                    Log in
-                </FormButton>
+                    {isLoginLoading ? <Loader /> : "Log in"}
+                </Button>
             </form>
             <p className="text-sm text-gray-400">
                 Don't have an account?{" "}
