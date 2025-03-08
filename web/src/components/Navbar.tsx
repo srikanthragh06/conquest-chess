@@ -15,8 +15,6 @@ import { removeAuthToken } from "@/utils/token";
 import { useNavigate } from "react-router-dom";
 import useCreateLobby from "@/hooks/useCreateLobby";
 import { IoMdHome } from "react-icons/io";
-import { TbAntennaBars5 } from "react-icons/tb";
-import { pingState } from "@/store/connection";
 import PingMeter from "./PingMeter";
 
 const Navbar = () => {
