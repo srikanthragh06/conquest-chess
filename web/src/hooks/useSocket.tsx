@@ -66,7 +66,6 @@ const useSocket = () => {
             socket.emit("ping");
 
             intervalId = setInterval(() => {
-                if (Date.now() - startTime > 5000) setPing(5000);
                 startTime = Date.now();
                 socket.emit("ping");
                 timeoutId = setTimeout(() => setPing(5000), 5000);
