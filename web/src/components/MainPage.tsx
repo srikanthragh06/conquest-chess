@@ -63,9 +63,7 @@ const MainPage = ({ children, className = "", hasNavbar }: MainPageProps) => {
                     </Drawer>
                 )}
             </div>
-            <div className="sticky top-0 left-0 hidden lg:block">
-                {hasNavbar && <Navbar />}
-            </div>
+            <div className="hidden lg:block">{hasNavbar && <Navbar />}</div>
             <div
                 className={`w-full h-full 
                         flex flex-col

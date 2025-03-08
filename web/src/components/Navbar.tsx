@@ -29,8 +29,8 @@ const Navbar = () => {
 
     return (
         <div
-            className="flex flex-col h-screen border- bg-zinc-900 w-[300px] 
-                        py- space-y-3"
+            className="flex flex-col h-screen bg-zinc-900 w-[300px] 
+                        space-y-3 sticky top-0 bottom-0"
         >
             <div className="flex flex-col">
                 <div className="flex items-center justify-start space-x-5 border- px-4 py-4 relative">

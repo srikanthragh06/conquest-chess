@@ -24,7 +24,6 @@ function App() {
     return (
         <div
             className="w-full h-full min-h-screen
-                        overflow-y-auto
                         flex flex-col items-center
                         text-3xl bg-black text-white"
         >
