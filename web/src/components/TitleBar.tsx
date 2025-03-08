@@ -6,13 +6,10 @@ const TitleBar = () => {
 
     return (
         <div
-            className="w-full flex justify-between pt-
+            className="w-full flex justify-between pt- items-center
                         border-"
         >
-            <div
-                className="flex w-full
-                            border- items- justify-between"
-            >
+            <div className="flex w-full items- justify-between items-center">
                 <div className="w-full flex justify-center">
                     <img
                         src={navbarLogo}
@@ -22,37 +19,6 @@ const TitleBar = () => {
                     />
                 </div>
             </div>
-            {/* <div
-                className="flex md:space-x-8 space-x-3 justify-evenly
-                            w-auto sm:w-auto
-                            lg:text-xl md:text-lg text-base border-"
-            >
-                <button
-                    className=" bg-gray-700 border- 
-                                lg:px-4  px-3 py-1
-                                rounded-md 
-                                lg:text-lg md:text-base text-sm
-                                hover:opacity-50 active:opacity-30 transition"
-                    onClick={() => {
-                        handleCreateLobby();
-                    }}
-                >
-                    Create Lobby
-                </button>
-                <button
-                    className=" bg-gray-700 border- 
-                                lg:px-4 px-3 py-1
-                                rounded-md 
-                                lg:text-lg md:text-base text-sm
-                                hover:opacity-50 active:opacity-30 transition"
-                    onClick={() => {
-                        if (isLoggedIn) handleLogOut();
-                        else navigate("/auth");
-                    }}
-                >
-                    {isLoggedIn ? "Log out" : "Log in"}
-                </button>
-            </div> */}
         </div>
     );
 };

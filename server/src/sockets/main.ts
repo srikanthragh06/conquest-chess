@@ -20,7 +20,7 @@ import {
     onTimeout,
 } from "./game";
 import { onDisconnect } from "./disconnect";
-import { stringify } from "querystring";
+import { socketEmit } from "../utils/responseTemplates";
 
 export const handleIOConnection = (socket: Socket) => {
     socket.onAny((event) => logSocketOn(socket, event));
@@ -77,6 +77,10 @@ export const handleIOConnection = (socket: Socket) => {
     );
     socket.on("accept-draw", (gameId: string) => onAcceptDraw(socket, gameId));
     socket.on("reject-draw", (gameId: string) => onRejectDraw(socket, gameId));
+
+    socket.on("ping", () => {
+        socketEmit(socket, "pong");
+    });
 
     socket.on("disconnect", () => onDisconnect(socket));
 };

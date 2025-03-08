@@ -9,6 +9,7 @@ import {
     isErrorDialogState,
     isRegisteringState,
 } from "../store/page";
+import { pingState } from "@/store/connection";
 
 const useSocket = () => {
     const userDetails = useRecoilValue(userDetailsState);
@@ -18,6 +19,7 @@ const useSocket = () => {
     const setErrorDialog = useSetRecoilState(errorDialogState);
     const setErrorTitle = useSetRecoilState(errorTitleState);
     const setIsErrorDialog = useSetRecoilState(isErrorDialogState);
+    const setPing = useSetRecoilState(pingState);
 
     const [isSocketConnected, setIsSocketConnected] = useState(false);
 
@@ -49,8 +51,25 @@ const useSocket = () => {
     };
 
     useEffect(() => {
+        setIsRegistering(true);
+        socket.connect();
+    }, []);
+
+    useEffect(() => {
+        let startTime: number;
         socket.on("connect", () => {
             setIsSocketConnected(true);
+            startTime = Date.now();
+            socket.emit("ping");
+            setInterval(() => {
+                if (Date.now() - startTime > 5000) setPing(5000);
+                startTime = Date.now();
+                socket.emit("ping");
+            }, 5000);
+        });
+
+        socket.on("pong", () => {
+            setPing(Date.now() - startTime);
         });
 
         socket.on(
@@ -77,9 +96,6 @@ const useSocket = () => {
         socket.on("reconnect", () => {
             setIsSocketConnected(true);
         });
-
-        setIsRegistering(true);
-        socket.connect();
 
         return () => {
             socket.off("connect");

@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { userDetailsState } from "@/store/auth";
 import { useRecoilValue, useSetRecoilState } from "recoil";
-import { FaChessKnight, FaRobot } from "react-icons/fa";
+import { FaChessKnight } from "react-icons/fa";
 import NavButton from "./NavButton";
 import { FaChess } from "react-icons/fa";
 import { BiSolidChess } from "react-icons/bi";
@@ -15,10 +15,14 @@ import { removeAuthToken } from "@/utils/token";
 import { useNavigate } from "react-router-dom";
 import useCreateLobby from "@/hooks/useCreateLobby";
 import { IoMdHome } from "react-icons/io";
+import { TbAntennaBars5 } from "react-icons/tb";
+import { pingState } from "@/store/connection";
+import PingMeter from "./PingMeter";
 
 const Navbar = () => {
     const userDetails = useRecoilValue(userDetailsState);
     const setUserDetails = useSetRecoilState(userDetailsState);
+
     const navigate = useNavigate();
 
     const handleLogOut = () => {
@@ -33,7 +37,7 @@ const Navbar = () => {
                         space-y-3 sticky top-0 bottom-0"
         >
             <div className="flex flex-col">
-                <div className="flex items-center justify-start space-x-5 border- px-4 py-4 relative">
+                <div className="flex items-center justify-start space-x-5 border- px-4 py-4">
                     <Avatar className="w-[30px] h-[30px] text-sm">
                         <AvatarImage src="https://github.com/shadcn.png" />
                         <AvatarFallback>
@@ -46,6 +50,7 @@ const Navbar = () => {
                     <div className="text-sm">
                         <span className="font-bold">{userDetails.id}</span>
                     </div>
+                    <PingMeter className="absolute right-0 text-base" />
                 </div>
             </div>
             <div className="flex flex-col text-base items-center">
@@ -55,7 +60,6 @@ const Navbar = () => {
                     onClick={() => navigate("/")}
                 />
                 <NavButton text="Queue match" icon={<FaChessKing />} />
-                <NavButton text="Play AI" icon={<FaRobot />} />
                 <NavButton
                     text="Create Lobby"
                     icon={<FaChess />}
