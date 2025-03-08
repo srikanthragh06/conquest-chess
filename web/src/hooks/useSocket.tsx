@@ -57,11 +57,14 @@ const useSocket = () => {
 
     useEffect(() => {
         let startTime: number;
+        let intervalId: NodeJS.Timeout;
+
         socket.on("connect", () => {
             setIsSocketConnected(true);
             startTime = Date.now();
             socket.emit("ping");
-            setInterval(() => {
+
+            intervalId = setInterval(() => {
                 if (Date.now() - startTime > 5000) setPing(5000);
                 startTime = Date.now();
                 socket.emit("ping");
@@ -91,6 +94,7 @@ const useSocket = () => {
 
         socket.on("disconnect", () => {
             setIsSocketConnected(false);
+            clearInterval(intervalId); // Clear the interval when disconnected
         });
 
         socket.on("reconnect", () => {
@@ -98,7 +102,9 @@ const useSocket = () => {
         });
 
         return () => {
+            clearInterval(intervalId); // Ensure cleanup on unmount
             socket.off("connect");
+            socket.off("pong");
             socket.off("registered-user");
             socket.off("register-user-error");
             socket.off("disconnect");
