@@ -14,6 +14,7 @@ import { FaChessRook } from "react-icons/fa6";
 import { removeAuthToken } from "@/utils/token";
 import { useNavigate } from "react-router-dom";
 import useCreateLobby from "@/hooks/useCreateLobby";
+import { IoMdHome } from "react-icons/io";
 
 const Navbar = () => {
     const userDetails = useRecoilValue(userDetailsState);
@@ -48,6 +49,11 @@ const Navbar = () => {
                 </div>
             </div>
             <div className="flex flex-col text-base items-center">
+                <NavButton
+                    text="Home"
+                    icon={<IoMdHome />}
+                    onClick={() => navigate("/")}
+                />
                 <NavButton text="Queue match" icon={<FaChessKing />} />
                 <NavButton text="Play AI" icon={<FaRobot />} />
                 <NavButton

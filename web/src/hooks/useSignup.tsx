@@ -19,9 +19,9 @@ const useSignup = () => {
 
     const [isSignupLoading, setIsSignupLoading] = useState(false);
 
-    const resetAuthState = () => {
-        setUserDetails({ id: null, isGuest: false });
-    };
+    // const resetAuthState = () => {
+    //     setUserDetails({ id: null, isGuest: false });
+    // };
 
     const handleSignup = async (e: FormEvent) => {
         e.preventDefault();
@@ -56,16 +56,13 @@ const useSignup = () => {
                     setSignupError("");
                     navigate("/");
                 } else {
-                    resetAuthState();
                     setSignupError(res?.data?.error || "Error");
                 }
             } else {
-                resetAuthState();
                 setSignupError("No response from server.");
             }
         } catch (error) {
             console.error(error);
-            resetAuthState();
             setSignupError("An error occurred during signin.");
         } finally {
             setIsSignupLoading(false);

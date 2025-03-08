@@ -38,11 +38,11 @@ export const onStartGame = async (socket: Socket, lobbyId: string) => {
 
         const lobby: lobbyType = JSON.parse(lobbyJSON);
 
-        if (lobby.players.length !== 2)
+        if (!lobby.participants[0] || !lobby.participants[1])
             return socketEmit(
                 socket,
                 "start-game-error",
-                `Lobby with lobby ID ${lobbyId} does not have 2 players`,
+                `Lobby with lobby ID ${lobbyId} does not have both participants selected`,
                 true
             );
 
@@ -57,8 +57,8 @@ export const onStartGame = async (socket: Socket, lobbyId: string) => {
         const newGameId = generate16CharUniqueString();
 
         const randomIndex = Math.floor(Math.random() * 2);
-        const whiteId = lobby.players[randomIndex];
-        const blackId = lobby.players[1 - randomIndex];
+        const whiteId = lobby.participants[randomIndex] as string;
+        const blackId = lobby.participants[1 - randomIndex] as string;
 
         const newGame: gameType = {
             gameId: newGameId,
@@ -79,15 +79,14 @@ export const onStartGame = async (socket: Socket, lobbyId: string) => {
         };
 
         const tx = redisClient.multi();
+
+        lobby.participants = [null, null];
+        tx.set(`chess-app:lobbyId:${lobbyId}:lobby`, JSON.stringify(lobby));
+
         tx.set(`chess-app:gameId:${newGameId}:game`, JSON.stringify(newGame));
 
         tx.set(`chess-app:userId:${whiteId}:gameId`, newGameId);
         tx.set(`chess-app:userId:${blackId}:gameId`, newGameId);
-
-        tx.del(`chess-app:userId:${whiteId}:lobbyId`);
-        tx.del(`chess-app:userId:${blackId}:lobbyId`);
-
-        tx.del(`chess-app:lobbyId:${lobbyId}:lobby`);
 
         const whiteSocketId = await redisClient.get(
             `chess-app:userId:${whiteId}:socketId`

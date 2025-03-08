@@ -5,6 +5,7 @@ import {
     onJoinLobby,
     onLeaveLobby,
     onMatchSelect,
+    onParticipantsSelect,
 } from "./lobby";
 import { logSocketOn } from "../utils/logging";
 import {
@@ -19,6 +20,7 @@ import {
     onTimeout,
 } from "./game";
 import { onDisconnect } from "./disconnect";
+import { stringify } from "querystring";
 
 export const handleIOConnection = (socket: Socket) => {
     socket.onAny((event) => logSocketOn(socket, event));
@@ -38,6 +40,16 @@ export const handleIOConnection = (socket: Socket) => {
             lobbyId: string;
             matchType: "BLitz" | "Rapid" | "Bullet";
         }) => onMatchSelect(socket, lobbyId, matchType)
+    );
+    socket.on(
+        "participants-select",
+        ({
+            lobbyId,
+            newParticipants,
+        }: {
+            lobbyId: string;
+            newParticipants: [string | null, string | null];
+        }) => onParticipantsSelect(socket, lobbyId, newParticipants)
     );
     socket.on("leave-lobby", ({ lobbyId }: { lobbyId: string }) =>
         onLeaveLobby(socket, lobbyId)

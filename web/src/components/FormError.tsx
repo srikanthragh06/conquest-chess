@@ -7,7 +7,7 @@ const FormError = ({
     children?: ReactNode;
     className?: string;
 }) => {
-    return <p className={`text-red-600 text-base ${className}`}>{children}</p>;
+    return <p className={`text-red-600 text-sm ${className}`}>{children}</p>;
 };
 
 export default FormError;

@@ -20,6 +20,7 @@ const useLobby = () => {
     const [lobbyDetailsError, setLobbyDetailsError] = useState<string | null>(
         null
     );
+
     const [startGameError, setStartGameError] = useState<string | null>(null);
     const setLoadingText = useSetRecoilState(loadingTextState);
     const setIsLoadingPage = useSetRecoilState(isLoadingPageState);
@@ -27,15 +28,20 @@ const useLobby = () => {
     const setErrorTitle = useSetRecoilState(errorTitleState);
     const setIsErrorDialog = useSetRecoilState(isErrorDialogState);
 
-    const isRegisterd = useRecoilValue(isRegisteredState);
+    const isRegistered = useRecoilValue(isRegisteredState);
 
     const handleStartGame = (e: FormEvent) => {
         e.preventDefault();
-        if (lobbyDetails) {
-            socket.emit("start-game", {
-                lobbyId: lobbyDetails.lobbyId,
-            });
-        }
+        if (
+            !lobbyDetails ||
+            !lobbyDetails.participants[0] ||
+            !lobbyDetails.participants[1] ||
+            lobbyDetails.hostId !== userDetails.id
+        )
+            return;
+        socket.emit("start-game", {
+            lobbyId: lobbyDetails.lobbyId,
+        });
     };
 
     const handleMatchTypeSelect = (type: "Blitz" | "Rapid" | "Bullet") => {
@@ -53,8 +59,46 @@ const useLobby = () => {
         }
     };
 
+    const handleClickPlayer = (userId: string) => {
+        if (!lobbyDetails || lobbyDetails.hostId !== userDetails.id) return;
+
+        setLobbyDetails((prev) => {
+            if (!prev) return prev;
+
+            const newParticipants: [string | null, string | null] = [
+                ...prev.participants,
+            ];
+
+            if (prev.participants.includes(userId)) {
+                if (userId === prev.participants[0]) {
+                    newParticipants[0] = null;
+                } else {
+                    newParticipants[1] = null;
+                }
+            } else {
+                if (newParticipants[0] === null) {
+                    newParticipants[0] = userId;
+                } else if (newParticipants[1] === null) {
+                    newParticipants[1] = userId;
+                } else {
+                    newParticipants[0] = userId;
+                }
+            }
+
+            socket.emit("participants-select", {
+                lobbyId: prev.lobbyId,
+                newParticipants,
+            });
+
+            return {
+                ...prev,
+                participants: newParticipants,
+            };
+        });
+    };
+
     useEffect(() => {
-        if (lobbyId && isRegisterd) {
+        if (lobbyId && isRegistered) {
             socket.emit("join-lobby", lobbyId);
             setLoadingText("Joining lobby");
             setIsLoadingPage(true);
@@ -83,7 +127,7 @@ const useLobby = () => {
             socket.off("lobby-details");
             socket.off("lobby-details-error");
         };
-    }, [lobbyId, isRegisterd]);
+    }, [lobbyId, isRegistered]);
 
     useEffect(() => {
         socket.on("started-game", (gameId) => {
@@ -104,7 +148,7 @@ const useLobby = () => {
         return () => {
             socket.emit("leave-lobby", { lobbyId });
         };
-    }, []);
+    }, [lobbyId]);
 
     return {
         lobbyId,
@@ -113,6 +157,7 @@ const useLobby = () => {
         handleStartGame,
         startGameError,
         handleMatchTypeSelect,
+        handleClickPlayer,
     };
 };
 

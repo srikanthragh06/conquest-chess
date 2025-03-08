@@ -19,9 +19,9 @@ const useLogin = () => {
 
     const [isLoginLoading, setIsLoginLoading] = useState(false);
 
-    const resetAuthState = () => {
-        setUserDetails({ id: null, isGuest: false });
-    };
+    // const resetAuthState = () => {
+    //     setUserDetails({ id: null, isGuest: false });
+    // };
 
     const handleLogin = async (e: FormEvent) => {
         e.preventDefault();
@@ -46,16 +46,13 @@ const useLogin = () => {
 
                     navigate("/");
                 } else {
-                    resetAuthState();
                     setLoginError(res?.data?.error || "Error");
                 }
             } else {
-                resetAuthState();
                 setLoginError("No response from server.");
             }
         } catch (error) {
             console.error(error);
-            resetAuthState();
             setLoginError("An error occurred during signin.");
         } finally {
             setIsLoginLoading(false);

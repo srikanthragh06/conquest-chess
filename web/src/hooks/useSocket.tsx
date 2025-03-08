@@ -78,6 +78,7 @@ const useSocket = () => {
             setIsSocketConnected(true);
         });
 
+        setIsRegistering(true);
         socket.connect();
 
         return () => {
