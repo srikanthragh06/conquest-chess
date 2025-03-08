@@ -48,7 +48,6 @@ const Navbar = () => {
                     <div className="text-sm">
                         <span className="font-bold">{userDetails.id}</span>
                     </div>
-                    <PingMeter className="absolute right-0 text-base" />
                 </div>
             </div>
             <div className="flex flex-col text-base items-center">

@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import navbarLogo from "../../public/navbarLogo.png";
+import PingMeter from "./PingMeter";
 
 const TitleBar = () => {
     const navigate = useNavigate();
@@ -9,7 +10,7 @@ const TitleBar = () => {
             className="w-full flex justify-between pt- items-center
                         border-"
         >
-            <div className="flex w-full items- justify-between items-center">
+            <div className="flex w-full items-start justify-between py-1">
                 <div className="w-full flex justify-center">
                     <img
                         src={navbarLogo}
@@ -18,6 +19,7 @@ const TitleBar = () => {
                         onClick={() => navigate("/")}
                     />
                 </div>
+                <PingMeter className="absolute top-0 right-0" />
             </div>
         </div>
     );
