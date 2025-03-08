@@ -58,6 +58,7 @@ const useSocket = () => {
     useEffect(() => {
         let startTime: number;
         let intervalId: NodeJS.Timeout;
+        let timeoutId: NodeJS.Timeout;
 
         socket.on("connect", () => {
             setIsSocketConnected(true);
@@ -68,10 +69,12 @@ const useSocket = () => {
                 if (Date.now() - startTime > 5000) setPing(5000);
                 startTime = Date.now();
                 socket.emit("ping");
+                timeoutId = setTimeout(() => setPing(5000), 5000);
             }, 5000);
         });
 
         socket.on("pong", () => {
+            clearTimeout(timeoutId);
             setPing(Date.now() - startTime);
         });
 
