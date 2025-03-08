@@ -97,7 +97,8 @@ const useSocket = () => {
 
         socket.on("disconnect", () => {
             setIsSocketConnected(false);
-            clearInterval(intervalId); // Clear the interval when disconnected
+            clearInterval(intervalId);
+            clearTimeout(timeoutId);
         });
 
         socket.on("reconnect", () => {
@@ -105,7 +106,8 @@ const useSocket = () => {
         });
 
         return () => {
-            clearInterval(intervalId); // Ensure cleanup on unmount
+            clearInterval(intervalId);
+            clearInterval(timeoutId);
             socket.off("connect");
             socket.off("pong");
             socket.off("registered-user");
