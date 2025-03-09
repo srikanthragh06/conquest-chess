@@ -41,9 +41,7 @@ export const onCreateLobby = async (socket: Socket) => {
                     );
                     socket.leave(oldLobbyId);
 
-                    if (oldLobby.players.length === 0) {
-                        oldLobby.emptySince = Date.now();
-                    } else if (oldLobby.hostId === userId) {
+                    if (oldLobby.hostId === userId) {
                         oldLobby.hostId = oldLobby.players[0];
                     }
 
@@ -60,7 +58,6 @@ export const onCreateLobby = async (socket: Socket) => {
             hostId: userId,
             players: [userId],
             matchType: "Blitz",
-            emptySince: null,
             participants: [null, null],
         };
 
@@ -141,7 +138,6 @@ export const onJoinLobby = async (socket: Socket, lobbyId: string) => {
         lobby.players.push(userId);
         if (lobby.players.length === 1) {
             lobby.hostId = userId;
-            lobby.emptySince = null;
         }
 
         tx.set(`chess-app:lobbyId:${lobbyId}:lobby`, JSON.stringify(lobby));
