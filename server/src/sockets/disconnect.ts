@@ -1,6 +1,7 @@
 import { Socket } from "socket.io";
 import { lobbyType } from "../type/state";
 import { redisClient } from "../redis/client";
+import { handleLeaveLobby } from "../helpers/lobby";
 
 const removeUserFromSocketMappings = async (socketId: string) => {
     try {
@@ -75,7 +76,12 @@ export const onDisconnect = async (socket: Socket) => {
             `chess-app:userId:${userId}:lobbyId`
         );
         if (userLobbyId) {
-            await handleUserLeavingLobby(userId, userLobbyId, socket);
+            await handleLeaveLobby(
+                socket,
+                userId,
+                userLobbyId,
+                "leave-lobby-error"
+            );
         }
     } catch (err) {
         console.error(err);
