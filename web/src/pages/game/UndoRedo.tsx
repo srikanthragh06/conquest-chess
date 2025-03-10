@@ -19,15 +19,22 @@ const UndoRedo = ({
     });
 
     return (
-        <div className="w-full flex justify-around">
-            <FaArrowLeft
-                className="cursor-pointer"
+        <div className="w-full flex justify-between px-2">
+            <div
                 onClick={() => handleUndo()}
-            />
-            <FaArrowRight
-                className="cursor-pointer"
+                onMouseDown={(e) => e.preventDefault()}
+                className="hover:opacity-80 active:opacity-60"
+            >
+                <FaArrowLeft className="cursor-pointer text-xl" />
+            </div>
+
+            <div
                 onClick={() => handleRedo()}
-            />
+                onMouseDown={(e) => e.preventDefault()}
+                className="hover:opacity-80 active:opacity-60"
+            >
+                <FaArrowRight className="cursor-pointer text-xl" />
+            </div>
         </div>
     );
 };

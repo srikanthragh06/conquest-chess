@@ -2,8 +2,8 @@ import useLogin from "../../hooks/useLogin";
 import FormError from "../../components/FormError";
 import { Input } from "@/components/ui/input";
 import React from "react";
-import { Button } from "@/components/ui/button";
 import Loader from "../../components/Loader";
+import FormButton from "@/components/FormButton";
 
 const Login = ({
     setIsLogin,
@@ -52,12 +52,13 @@ const Login = ({
                     />
                 </div>
                 <FormError>{loginError}</FormError>
-                <Button
+                <FormButton
                     onClick={(e) => handleLogin(e)}
-                    className=" bg-zinc-800 sm:w-3/4 w-5/6"
+                    className=" bg-zinc-900 px-5 py-1 text-sm border-zinc-800 
+                                        border-2 border-opacity-5 shadow-md shadow-zinc-800 sm:w-3/4 w-5/6"
                 >
                     {isLoginLoading ? <Loader /> : "Log in"}
-                </Button>
+                </FormButton>
             </form>
             <p className="text-sm text-gray-400">
                 Don't have an account?{" "}

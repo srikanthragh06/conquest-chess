@@ -20,7 +20,7 @@ const FormButton = ({
     return (
         <button
             onClick={isActive ? onClick : () => {}}
-            className={`text-lg 
+            className={`
                         px-2 py-1 rounded-md 
                         ${
                             isActive

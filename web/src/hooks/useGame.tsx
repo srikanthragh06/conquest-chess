@@ -7,8 +7,13 @@ import {
     Square,
 } from "react-chessboard/dist/chessboard/types";
 import { isRegisteredState, userDetailsState } from "../store/auth";
-import { useRecoilValue } from "recoil";
+import { useRecoilValue, useSetRecoilState } from "recoil";
 import { gameType, movesType } from "../types/game";
+import {
+    errorDialogState,
+    errorTitleState,
+    isErrorDialogState,
+} from "@/store/page";
 
 const useGame = () => {
     const { gameId } = useParams();
@@ -31,6 +36,10 @@ const useGame = () => {
     const [drawRequest, setDrawRequest] = useState(false);
 
     const [inPast, setInPast] = useState(false);
+
+    const setErrorTitle = useSetRecoilState(errorTitleState);
+    const setErrorDialog = useSetRecoilState(errorDialogState);
+    const setIsErrorDialog = useSetRecoilState(isErrorDialogState);
 
     const isValidTurn = () => {
         const userId = userDetails.id;
@@ -283,11 +292,15 @@ const useGame = () => {
         );
 
         socket.on("get-game-error", (msg: string) => {
-            setGameError(msg);
+            setIsErrorDialog(true);
+            setErrorTitle("Game Error");
+            setErrorDialog(msg);
         });
 
         socket.on("make-move-error", (msg) => {
-            setGameError(msg);
+            setIsErrorDialog(true);
+            setErrorTitle("Move error");
+            setErrorDialog(msg);
             const updatedBoard = new Chess(board.fen());
             updatedBoard.undo();
             setBoard(updatedBoard);
@@ -327,7 +340,6 @@ const useGame = () => {
         moveTo,
         showPromotionDialog,
         onPromotionPieceSelect,
-        gameError,
         getGameStatusMsg,
         handleResign,
         handleRequestDraw,

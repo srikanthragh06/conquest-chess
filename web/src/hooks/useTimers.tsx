@@ -34,6 +34,18 @@ const useTimers = (game: gameType, moves: movesType) => {
 
     const delay = 1000;
 
+    const formatTime = (ms: number) => {
+        const minutes = Math.floor(ms / 60000);
+        let seconds = Math.round((ms % 60000) / 1000);
+
+        if (seconds === 60) {
+            seconds = 0;
+            return `${minutes + 1}:00`;
+        }
+
+        return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    };
+
     const updateTimer = (
         timeRem: number | null,
         setTimeRem: React.Dispatch<React.SetStateAction<number>>,
@@ -157,7 +169,7 @@ const useTimers = (game: gameType, moves: movesType) => {
         }
     }, [blackTimeRem]);
 
-    return { whiteTimeRem, blackTimeRem };
+    return { whiteTimeRem, blackTimeRem, formatTime };
 };
 
 export default useTimers;

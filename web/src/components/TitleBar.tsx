@@ -19,7 +19,7 @@ const TitleBar = () => {
                         onClick={() => navigate("/")}
                     />
                 </div>
-                <PingMeter className="absolute top-0 right-0" />
+                <PingMeter className="fixed top-0 right-0" />
             </div>
         </div>
     );

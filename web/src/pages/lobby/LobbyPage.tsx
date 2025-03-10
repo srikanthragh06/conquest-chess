@@ -110,7 +110,8 @@ const LobbyPage = () => {
                     <div className="w-full flex flex-col items-center space-y-1">
                         <FormError>{startGameError}</FormError>
                         <FormButton
-                            className="bg-zinc-800 mt-8 px-3 py-2 text-sm"
+                            className="bg-zinc-900 px-5 py-1 text-sm border-zinc-800 
+                                        border-2 border-opacity-5 shadow-md shadow-zinc-800"
                             isActive={
                                 lobbyDetails &&
                                 lobbyDetails.participants[0] !== null &&
