@@ -17,12 +17,6 @@ CREATE TABLE "Users" (
     last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE "Guests" (
-    guest_id VARCHAR(16) PRIMARY KEY CHECK (LENGTH(guest_id) = 16),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_guests_createdAt ON "Guests"(created_at);
 
 
 CREATE TABLE "Games" (
@@ -49,6 +43,5 @@ CREATE INDEX idx_moves_game_id ON "Moves"(game_id);
 
 
 SELECT * FROM "Users";
-SELECT * FROM "Guests";
 SELECT * FROM "Games";
 SELECT * FROM "Moves";
