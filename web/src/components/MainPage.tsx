@@ -29,7 +29,6 @@ type MainPageProps = {
     children?: ReactNode;
     className?: string;
     hasNavbar: boolean;
-    registeredRequired: boolean;
 };
 
 const MainPage = ({ children, className = "", hasNavbar }: MainPageProps) => {

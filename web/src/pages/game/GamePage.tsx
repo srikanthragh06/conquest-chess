@@ -27,15 +27,10 @@ const GamePage = () => {
         handleAcceptDraw,
         handleRejectDraw,
         setInPast,
-        getGameStatusMsg,
     } = useGame();
 
     return (
-        <MainPage
-            hasNavbar={true}
-            registeredRequired={false}
-            className="items-center"
-        >
+        <MainPage hasNavbar={true} className="items-center">
             {game && moves && (
                 <ChessGame
                     game={game}

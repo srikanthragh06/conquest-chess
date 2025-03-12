@@ -1,7 +1,11 @@
 import { Chess } from "chess.js";
 import { gameType, movesType } from "../type/state";
 import { queryClient, transaction } from "../db/postgres";
-import { findOneWithCondition, insertRecord } from "../db/queries";
+import {
+    findOneWithCondition,
+    insertRecord,
+    updateRecords,
+} from "../db/queries";
 
 export const updateRemainingTime = (game: gameType, moves: movesType) => {
     let whiteTime =
@@ -96,6 +100,102 @@ export const saveGameInDB = async (game: gameType, moves: movesType) => {
                     "move_id"
                 );
             });
+
+            const whiteUser = await findOneWithCondition(
+                client,
+                "Users",
+                ["username", "games", "wins", "draws", "losses"],
+                { username: game.whiteId }
+            );
+
+            const blackUser = await findOneWithCondition(
+                client,
+                "Users",
+                ["username", "games", "wins", "draws", "losses"],
+                { username: game.blackId }
+            );
+
+            if (
+                [
+                    "stalemate",
+                    "threefold-repetition",
+                    "insufficient-material",
+                    "mutual-draw",
+                ].includes(game.gameStatus.status)
+            ) {
+                if (whiteUser)
+                    await updateRecords(
+                        client,
+                        "Users",
+                        {
+                            games: whiteUser.games + 1,
+                            draws: whiteUser.draws + 1,
+                        },
+                        { username: game.whiteId }
+                    );
+                if (blackUser)
+                    await updateRecords(
+                        client,
+                        "Users",
+                        {
+                            games: blackUser.games + 1,
+                            draws: blackUser.draws + 1,
+                        },
+                        { username: game.blackId }
+                    );
+            } else if (
+                ["checkmate", "timeout", "resignation", "forfeit"].includes(
+                    game.gameStatus.status
+                ) &&
+                game.gameStatus.color === "w"
+            ) {
+                if (whiteUser)
+                    await updateRecords(
+                        client,
+                        "Users",
+                        {
+                            games: whiteUser.games + 1,
+                            wins: whiteUser.wins + 1,
+                        },
+                        { username: game.whiteId }
+                    );
+                if (blackUser)
+                    await updateRecords(
+                        client,
+                        "Users",
+                        {
+                            games: blackUser.games + 1,
+                            losses: blackUser.losses - 1,
+                        },
+                        { username: game.blackId }
+                    );
+            } else if (
+                ["checkmate", "timeout", "resignation", "forfeit"].includes(
+                    game.gameStatus.status
+                ) &&
+                game.gameStatus.color === "b"
+            ) {
+                if (whiteUser)
+                    await updateRecords(
+                        client,
+                        "Users",
+                        {
+                            games: whiteUser.games + 1,
+                            losses: whiteUser.losses - 1,
+                        },
+                        { username: game.whiteId }
+                    );
+                if (blackUser)
+                    await updateRecords(
+                        client,
+                        "Users",
+                        {
+                            games: blackUser.games + 1,
+                            wins: blackUser.wins + 1,
+                        },
+                        { username: game.blackId }
+                    );
+            }
         });
     } catch (err) {
         console.error(err);

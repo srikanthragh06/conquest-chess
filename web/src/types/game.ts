@@ -38,3 +38,14 @@ export type gameStatusType = {
         | "insufficient-material"
         | "mutual-draw";
 };
+
+export type gameCardType = {
+    gameId: string;
+    fen: string;
+    gameStatus: string;
+    startTime: number;
+    whiteId: string;
+    blackId: string;
+    type: string;
+    winner: string;
+};

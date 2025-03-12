@@ -20,11 +20,7 @@ const LobbyPage = () => {
     } = useLobby();
 
     return (
-        <MainPage
-            hasNavbar={true}
-            registeredRequired={true}
-            className="items-center"
-        >
+        <MainPage hasNavbar={true} className="items-center">
             {lobbyDetails && (
                 <div className="flex flex-col items-center mt-3 sm:mt-6 space-y-6">
                     {/* Lobby Link */}

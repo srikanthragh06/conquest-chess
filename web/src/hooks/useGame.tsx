@@ -13,6 +13,8 @@ import {
     errorDialogState,
     errorTitleState,
     isErrorDialogState,
+    isLoadingPageState,
+    loadingTextState,
 } from "@/store/page";
 
 const useGame = () => {
@@ -31,7 +33,7 @@ const useGame = () => {
         Record<string, { background: string; borderRadius?: string }>
     >({});
     const [isWhiteTurn, setIsWhiteTurn] = useState(true);
-    const [gameError, setGameError] = useState<string | null>(null);
+    const [_, setGameError] = useState<string | null>(null);
 
     const [drawRequest, setDrawRequest] = useState(false);
 
@@ -40,6 +42,9 @@ const useGame = () => {
     const setErrorTitle = useSetRecoilState(errorTitleState);
     const setErrorDialog = useSetRecoilState(errorDialogState);
     const setIsErrorDialog = useSetRecoilState(isErrorDialogState);
+
+    const setIsLoadingPage = useSetRecoilState(isLoadingPageState);
+    const setLoadingText = useSetRecoilState(loadingTextState);
 
     const isValidTurn = () => {
         const userId = userDetails.id;
@@ -254,6 +259,8 @@ const useGame = () => {
     useEffect(() => {
         if (gameId && isRegistered) {
             socket.emit("get-game", gameId);
+            setIsLoadingPage(true);
+            setLoadingText("Joining Game");
         }
 
         socket.on(
@@ -270,6 +277,7 @@ const useGame = () => {
                 setMoves(serverMoves);
                 setBoard(updatedBoard);
                 setGameError(null);
+                setIsLoadingPage(false);
             }
         );
 
@@ -288,6 +296,7 @@ const useGame = () => {
                 setBoard(updatedBoard);
                 setGameError(null);
                 socket.emit("get-time", gameId);
+                setIsLoadingPage(false);
             }
         );
 
@@ -295,6 +304,7 @@ const useGame = () => {
             setIsErrorDialog(true);
             setErrorTitle("Game Error");
             setErrorDialog(msg);
+            setIsLoadingPage(false);
         });
 
         socket.on("make-move-error", (msg) => {

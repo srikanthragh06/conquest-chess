@@ -7,11 +7,7 @@ const AuthPage = () => {
     const [isLogin, setIsLogin] = useState(true);
 
     return (
-        <MainPage
-            hasNavbar={false}
-            registeredRequired={false}
-            className="items-center justify-center"
-        >
+        <MainPage hasNavbar={false} className="items-center justify-center">
             {isLogin ? (
                 <Login setIsLogin={setIsLogin} />
             ) : (

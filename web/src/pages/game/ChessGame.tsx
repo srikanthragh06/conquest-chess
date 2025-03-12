@@ -90,6 +90,7 @@ const ChessGame = ({
 
     const boardRef = useRef<HTMLDivElement | null>(null);
     const movesRef = useRef<HTMLDivElement | null>(null);
+
     useEffect(() => {
         const updateHeight = () => {
             if (boardRef.current && movesRef.current) {
@@ -303,7 +304,10 @@ const ChessGame = ({
                     <TableBody>
                         {moves.map((move, index) => {
                             return (
-                                <TableRow className="text-white hover:opacity-90">
+                                <TableRow
+                                    key={index}
+                                    className="text-white hover:opacity-90"
+                                >
                                     <TableCell className="text-xs md:text-sm">
                                         {index + 1}
                                     </TableCell>
