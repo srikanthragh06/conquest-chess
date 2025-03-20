@@ -165,7 +165,7 @@ export const saveGameInDB = async (game: gameType, moves: movesType) => {
                         "Users",
                         {
                             games: blackUser.games + 1,
-                            losses: blackUser.losses - 1,
+                            losses: blackUser.losses + 1,
                         },
                         { username: game.blackId }
                     );
@@ -181,7 +181,7 @@ export const saveGameInDB = async (game: gameType, moves: movesType) => {
                         "Users",
                         {
                             games: whiteUser.games + 1,
-                            losses: whiteUser.losses - 1,
+                            losses: whiteUser.losses + 1,
                         },
                         { username: game.whiteId }
                     );
