@@ -7,7 +7,6 @@ import { FaChess } from "react-icons/fa";
 import { FaChessKing } from "react-icons/fa";
 import { MdLogout } from "react-icons/md";
 import { CgProfile } from "react-icons/cg";
-import { FaSearch } from "react-icons/fa";
 import { FaChessRook } from "react-icons/fa6";
 import { removeAuthToken } from "@/utils/token";
 import { useNavigate } from "react-router-dom";
@@ -43,7 +42,7 @@ const Navbar = () => {
         >
             <div className="flex flex-col">
                 <div className="flex items-center justify-start space-x-5 border- px-4 py-4">
-                    <Avatar className="w-[30px] h-[30px] text-sm">
+                    <Avatar className="w-[40px] h-[40px] text-sm">
                         <AvatarImage src="https://github.com/shadcn.png" />
                         <AvatarFallback>
                             {userDetails.isGuest
@@ -92,13 +91,12 @@ const Navbar = () => {
                         handleCreateLobby();
                     }}
                 />
-                <NavButton
-                    text="Search Players"
-                    icon={<FaSearch />}
-                    onClick={() => navigate("/search")}
-                />
                 {userDetails.id && !userDetails.isGuest && (
-                    <NavButton text="View Profile" icon={<CgProfile />} />
+                    <NavButton
+                        text="View Profile"
+                        icon={<CgProfile />}
+                        onClick={() => navigate(`/user/${userDetails.id}`)}
+                    />
                 )}
                 {userDetails.id && userDetails.isGuest && (
                     <NavButton

@@ -5,9 +5,12 @@ import {
     isErrorDialogState,
 } from "@/store/page";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useSetRecoilState } from "recoil";
 
 const useSearchPlayers = () => {
+    const navigate = useNavigate();
+
     const [searchString, setSearchString] = useState("");
     const [isSearchLoading, setIsSearchLoading] = useState(false);
 
@@ -23,6 +26,8 @@ const useSearchPlayers = () => {
             const res = await getUserApi(searchString);
             if (res) {
                 if (!res.data?.error) {
+                    if (res.data?.user)
+                        navigate(`/user/${res.data.user.username}`);
                 } else {
                     setErrorDialog(res?.data?.error || "Error");
                     setErrorTitle("Search User Error");

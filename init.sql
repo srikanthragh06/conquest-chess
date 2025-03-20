@@ -14,11 +14,12 @@ CREATE TABLE "Users" (
     update_password_token TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    games INT DEFAULT 0,
-    wins INT DEFAULT 0,
-    losses INT DEFAULT 0,
-    draws INT DEFAULT 0
+    games INT DEFAULT 0 CHECK (games >= 0),
+    wins INT DEFAULT 0 CHECK (wins >= 0),
+    losses INT DEFAULT 0 CHECK (losses >= 0),
+    draws INT DEFAULT 0 CHECK (draws >= 0)
 );
+
 
 
 
