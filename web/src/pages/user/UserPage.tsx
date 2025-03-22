@@ -1,7 +1,5 @@
 import MainPage from "@/components/MainPage";
-import { Avatar } from "@/components/ui/avatar";
 import useUserProfile from "@/hooks/useUserProfile";
-import { AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import GameCard from "./GameCard";
 import { Loader } from "lucide-react";

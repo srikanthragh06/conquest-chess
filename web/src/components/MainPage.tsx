@@ -62,6 +62,7 @@ const MainPage = ({ children, className = "", hasNavbar }: MainPageProps) => {
                 className={`w-full h-full 
                         flex flex-col
                         overflow-x-hidden
+                        pb-3
                         ${className}`}
             >
                 {hasNavbar && <TitleBar />}

@@ -1,4 +1,3 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { userDetailsState } from "@/store/auth";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { FaChessKnight } from "react-icons/fa";
