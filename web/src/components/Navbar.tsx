@@ -44,16 +44,16 @@ const Navbar = () => {
         >
             <div className="flex flex-col">
                 <div className="flex items-center justify-start space-x-5 border- px-4 py-4">
-                    <Avatar className="w-[40px] h-[40px] text-sm">
+                    {/* <Avatar className="w-[40px] h-[40px] text-sm">
                         <AvatarImage src="https://github.com/shadcn.png" />
                         <AvatarFallback>
                             {userDetails.isGuest
                                 ? "G"
                                 : userDetails.id?.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
-                    </Avatar>
+                    </Avatar> */}
 
-                    <div className="text-sm">
+                    <div className="sm:text-xl text-lg">
                         <span className="font-bold">{userDetails.id}</span>
                     </div>
                 </div>

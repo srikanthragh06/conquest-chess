@@ -20,15 +20,15 @@ const UserPage = () => {
                     className="px-4 py-3 sm:px-6 sm:py-4 flex rounded-lg border-2 border-zinc-800 shadow-md 
                         shadow-zinc-800 sm:mt-8 mt-4 sm:space-x-8 space-x-5"
                 >
-                    <Avatar
+                    {/* <Avatar
                         className="w-[75px] h-[75px]
                                 sm:w-[100px] sm:h-[100px]
                                 text-sm"
                     >
                         <AvatarImage src="https://github.com/shadcn.png" />
                         <AvatarFallback></AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col items-center justify-around ">
+                    </Avatar> */}
+                    <div className="flex flex-col items-center justify-around sm:space-y-3 space-y-2">
                         <div className="text-base sm:text-lg font-bold">
                             {userProfile.username}
                         </div>
