@@ -15,10 +15,12 @@ import { IoMdHome } from "react-icons/io";
 import FormInput from "./FormInput";
 import FormButton from "./FormButton";
 import useSearchPlayers from "@/hooks/useSearchPlayers";
+import { openQueueMatchState } from "@/store/page";
 
 const Navbar = () => {
     const userDetails = useRecoilValue(userDetailsState);
     const setUserDetails = useSetRecoilState(userDetailsState);
+    const setOpenQueueMatch = useSetRecoilState(openQueueMatchState);
 
     const navigate = useNavigate();
 
@@ -83,7 +85,11 @@ const Navbar = () => {
                     icon={<IoMdHome />}
                     onClick={() => navigate("/")}
                 />
-                <NavButton text="Queue match" icon={<FaChessKing />} />
+                <NavButton
+                    text="Queue match"
+                    icon={<FaChessKing />}
+                    onClick={() => setOpenQueueMatch(true)}
+                />
                 <NavButton
                     text="Create Lobby"
                     icon={<FaChess />}

@@ -24,6 +24,7 @@ import {
     DialogDescription,
     DialogTitle,
 } from "../components/ui/dialog";
+import QueueMatchDialog from "./QueueMatchDialog";
 
 type MainPageProps = {
     children?: ReactNode;
@@ -80,6 +81,7 @@ const MainPage = ({ children, className = "", hasNavbar }: MainPageProps) => {
                         <DialogDescription>{errorDialog}</DialogDescription>
                     </DialogContent>
                 </Dialog>
+                <QueueMatchDialog />
             </div>
         </div>
     );

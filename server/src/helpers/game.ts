@@ -1,11 +1,52 @@
 import { Chess } from "chess.js";
-import { gameType, movesType } from "../type/state";
+import { gameType, lobbyType, movesType } from "../type/state";
 import { queryClient, transaction } from "../db/postgres";
 import {
     findOneWithCondition,
     insertRecord,
     updateRecords,
 } from "../db/queries";
+import { generate16CharUniqueString } from "../utils/utils";
+import Redis from "ioredis";
+
+export const startGame = async (
+    redisClient: Redis,
+    matchType: "Blitz" | "Bullet" | "Rapid",
+    participants: [string | null, string | null]
+) => {
+    const newGameId = generate16CharUniqueString();
+
+    const randomIndex = Math.floor(Math.random() * 2);
+    const whiteId = participants[randomIndex] as string;
+    const blackId = participants[1 - randomIndex] as string;
+
+    const newGame: gameType = {
+        gameId: newGameId,
+        type: matchType,
+        whiteId,
+        blackId,
+        fen: new Chess().fen(),
+        startTime: Date.now(),
+        gameStatus: { color: "w", status: "playing" },
+        drawRejects: {
+            w: 0,
+            b: 0,
+        },
+        drawRequested: {
+            w: false,
+            b: false,
+        },
+    };
+
+    const tx = redisClient.multi();
+
+    tx.set(`chess-app:gameId:${newGameId}:game`, JSON.stringify(newGame));
+
+    tx.set(`chess-app:userId:${whiteId}:gameId`, newGameId);
+    tx.set(`chess-app:userId:${blackId}:gameId`, newGameId);
+
+    return { tx, newGame };
+};
 
 export const updateRemainingTime = (game: gameType, moves: movesType) => {
     let whiteTime =

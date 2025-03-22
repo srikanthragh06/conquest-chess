@@ -25,7 +25,6 @@ export const onRegisterUser = async (authToken: string, socket: Socket) => {
                 process.env.JWT_SECRET_KEY as string,
                 { expiresIn: "168h" }
             );
-            console.log("nojwttoken");
         } else {
             let decodedToken: JwtPayload | string | null = null;
 
@@ -36,7 +35,6 @@ export const onRegisterUser = async (authToken: string, socket: Socket) => {
                 ) as JwtPayload;
             } catch (error) {
                 if (error instanceof jwt.TokenExpiredError) {
-                    // Try extracting the expired token data
                     try {
                         decodedToken = jwt.decode(authToken) as JwtPayload;
                     } catch {
@@ -100,7 +98,6 @@ export const onRegisterUser = async (authToken: string, socket: Socket) => {
             if (decodedToken.isGuest) {
                 isGuest = true;
                 const guestId = await verifyGuestIdInJWT(decodedToken);
-                console.log("verifyGuestId", { guestId });
                 if (guestId) {
                     userId = guestId;
                     newAuthToken = authToken;

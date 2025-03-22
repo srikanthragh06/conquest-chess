@@ -21,66 +21,143 @@ import {
 } from "./game";
 import { onDisconnect } from "./disconnect";
 import { socketEmit } from "../utils/responseTemplates";
+import { onQueueMatch } from "./queueMatch";
+import { consoleLogRed } from "../utils/colorConsoleLogging";
+
+const safeSocketHandler =
+    (handler: (...args: any[]) => void) =>
+    (...args: any[]) => {
+        try {
+            handler(...args);
+        } catch (err) {
+            consoleLogRed(`Socket error: ${String(err)}`);
+        }
+    };
 
 export const handleIOConnection = (socket: Socket) => {
-    socket.onAny((event) => logSocketOn(socket, event));
+    socket.onAny(safeSocketHandler((event) => logSocketOn(socket, event)));
 
-    socket.on("register-user", ({ authToken }: { authToken: string }) =>
-        onRegisterUser(authToken, socket)
+    socket.on(
+        "register-user",
+        safeSocketHandler(({ authToken }: { authToken: string }) =>
+            onRegisterUser(authToken, socket)
+        )
     );
 
-    socket.on("create-lobby", () => onCreateLobby(socket));
-    socket.on("join-lobby", (lobbyId: string) => onJoinLobby(socket, lobbyId));
+    socket.on(
+        "create-lobby",
+        safeSocketHandler(() => onCreateLobby(socket))
+    );
+
+    socket.on(
+        "join-lobby",
+        safeSocketHandler((lobbyId: string) => onJoinLobby(socket, lobbyId))
+    );
+
     socket.on(
         "match-select",
-        ({
-            lobbyId,
-            matchType,
-        }: {
-            lobbyId: string;
-            matchType: "BLitz" | "Rapid" | "Bullet";
-        }) => onMatchSelect(socket, lobbyId, matchType)
+        safeSocketHandler(
+            ({
+                lobbyId,
+                matchType,
+            }: {
+                lobbyId: string;
+                matchType: "Blitz" | "Rapid" | "Bullet";
+            }) => onMatchSelect(socket, lobbyId, matchType)
+        )
     );
+
     socket.on(
         "participants-select",
-        ({
-            lobbyId,
-            newParticipants,
-        }: {
-            lobbyId: string;
-            newParticipants: [string | null, string | null];
-        }) => onParticipantsSelect(socket, lobbyId, newParticipants)
-    );
-    socket.on("leave-lobby", ({ lobbyId }: { lobbyId: string }) =>
-        onLeaveLobby(socket, lobbyId)
+        safeSocketHandler(
+            ({
+                lobbyId,
+                newParticipants,
+            }: {
+                lobbyId: string;
+                newParticipants: [string | null, string | null];
+            }) => onParticipantsSelect(socket, lobbyId, newParticipants)
+        )
     );
 
-    socket.on("start-game", ({ lobbyId }: { lobbyId: string }) =>
-        onStartGame(socket, lobbyId)
+    socket.on(
+        "leave-lobby",
+        safeSocketHandler(({ lobbyId }: { lobbyId: string }) =>
+            onLeaveLobby(socket, lobbyId)
+        )
     );
-    socket.on("get-game", (gameId: string) => onGetGame(socket, gameId));
+
+    socket.on(
+        "start-game",
+        safeSocketHandler(({ lobbyId }: { lobbyId: string }) =>
+            onStartGame(socket, lobbyId)
+        )
+    );
+
+    socket.on(
+        "get-game",
+        safeSocketHandler((gameId: string) => onGetGame(socket, gameId))
+    );
+
     socket.on(
         "make-move",
-        ({
-            gameId,
-            move,
-        }: {
-            gameId: string;
-            move: { from: string; to: string; promotion?: string };
-        }) => onMakeMove(socket, gameId, move)
+        safeSocketHandler(
+            ({
+                gameId,
+                move,
+            }: {
+                gameId: string;
+                move: { from: string; to: string; promotion?: string };
+            }) => onMakeMove(socket, gameId, move)
+        )
     );
-    socket.on("get-time", (gameId: string) => onGetTime(socket, gameId));
-    socket.on("timeout", (gameId: string) => onTimeout(socket, gameId));
-    socket.on("resign", (gameId: string) => onResign(socket, gameId));
-    socket.on("request-draw", (gameId: string) =>
-        onRequestDraw(socket, gameId)
+
+    socket.on(
+        "get-time",
+        safeSocketHandler((gameId: string) => onGetTime(socket, gameId))
     );
-    socket.on("accept-draw", (gameId: string) => onAcceptDraw(socket, gameId));
-    socket.on("reject-draw", (gameId: string) => onRejectDraw(socket, gameId));
+    socket.on(
+        "timeout",
+        safeSocketHandler((gameId: string) => onTimeout(socket, gameId))
+    );
+    socket.on(
+        "resign",
+        safeSocketHandler((gameId: string) => onResign(socket, gameId))
+    );
+    socket.on(
+        "request-draw",
+        safeSocketHandler((gameId: string) => onRequestDraw(socket, gameId))
+    );
+    socket.on(
+        "accept-draw",
+        safeSocketHandler((gameId: string) => onAcceptDraw(socket, gameId))
+    );
+    socket.on(
+        "reject-draw",
+        safeSocketHandler((gameId: string) => onRejectDraw(socket, gameId))
+    );
 
-    socket.on("ping", () => {
-        socketEmit(socket, "pong");
-    });
+    socket.on(
+        "queue-match",
+        safeSocketHandler(
+            ({ matchType }: { matchType: "Blitz" | "Rapid" | "Bullet" }) =>
+                onQueueMatch(socket, matchType)
+        )
+    );
+    socket.on(
+        "cancel-queue",
+        safeSocketHandler(() => {})
+    );
 
-    socket.on("disconnect", () => onDisconnect(socket));
+    socket.on(
+        "ping",
+        safeSocketHandler(() => {
+            socketEmit(socket, "pong");
+        })
+    );
+
+    socket.on(
+        "disconnect",
+        safeSocketHandler(() => onDisconnect(socket))
+    );
 };

@@ -8,6 +8,7 @@ import {
     getGameInDB,
     getMovesInDB,
     saveGameInDB,
+    startGame,
     updateGameEnd,
     updateRemainingTime,
 } from "../helpers/game";
@@ -54,46 +55,23 @@ export const onStartGame = async (socket: Socket, lobbyId: string) => {
                 true
             );
 
-        const newGameId = generate16CharUniqueString();
-
-        const randomIndex = Math.floor(Math.random() * 2);
-        const whiteId = lobby.participants[randomIndex] as string;
-        const blackId = lobby.participants[1 - randomIndex] as string;
-
-        const newGame: gameType = {
-            gameId: newGameId,
-            type: lobby.matchType,
-            whiteId,
-            blackId,
-            fen: new Chess().fen(),
-            startTime: Date.now(),
-            gameStatus: { color: "w", status: "playing" },
-            drawRejects: {
-                w: 0,
-                b: 0,
-            },
-            drawRequested: {
-                w: false,
-                b: false,
-            },
-        };
-
-        const tx = redisClient.multi();
-
+        const { tx, newGame } = await startGame(
+            redisClient,
+            lobby.matchType,
+            lobby.participants
+        );
         lobby.participants = [null, null];
-        tx.set(`chess-app:lobbyId:${lobbyId}:lobby`, JSON.stringify(lobby));
-
-        tx.set(`chess-app:gameId:${newGameId}:game`, JSON.stringify(newGame));
-
-        tx.set(`chess-app:userId:${whiteId}:gameId`, newGameId);
-        tx.set(`chess-app:userId:${blackId}:gameId`, newGameId);
+        tx.set(
+            `chess-app:lobbyId:${lobby.lobbyId}:lobby`,
+            JSON.stringify(lobby)
+        );
 
         const whiteSocketId = await redisClient.get(
-            `chess-app:userId:${whiteId}:socketId`
+            `chess-app:userId:${newGame.whiteId}:socketId`
         );
 
         const blackSocketId = await redisClient.get(
-            `chess-app:userId:${blackId}:socketId`
+            `chess-app:userId:${newGame.blackId}:socketId`
         );
 
         const result = await tx.exec();
@@ -106,9 +84,9 @@ export const onStartGame = async (socket: Socket, lobbyId: string) => {
             );
 
         redisClient.publish(
-            `chess-app:started-game:${newGameId}`,
+            `chess-app:started-game:${newGame.gameId}`,
             JSON.stringify({
-                gameId: newGameId,
+                gameId: newGame.gameId,
                 lobbyId,
                 whiteSocketId,
                 blackSocketId,

@@ -27,3 +27,8 @@ export const errorDialogState = atom({
     key: "errorDialog",
     default: "",
 });
+
+export const openQueueMatchState = atom({
+    key: "openQueueMatch",
+    default: false,
+});

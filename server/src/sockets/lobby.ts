@@ -166,7 +166,7 @@ export const onJoinLobby = async (socket: Socket, lobbyId: string) => {
 export const onMatchSelect = async (
     socket: Socket,
     lobbyId: string,
-    matchType: "BLitz" | "Rapid" | "Bullet"
+    matchType: "Blitz" | "Rapid" | "Bullet"
 ) => {
     try {
         const userId = await redisClient.get(
