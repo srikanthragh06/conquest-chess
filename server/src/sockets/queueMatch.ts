@@ -35,11 +35,9 @@ export const onQueueMatch = async (
             return socketEmit(
                 socket,
                 "queue-match-error",
-                `User with socketID ${socket.id} is already queued`,
+                `User ${userId} is already queued`,
                 true
             );
-
-        console.log({ matchType });
 
         const { tx, newGame } = await startGame(redisClient, matchType, [
             queueUserId,
@@ -80,7 +78,6 @@ export const onQueueMatch = async (
 
 export const onCancelQueue = async (socket: Socket) => {
     try {
-        console.log("cancel-queue");
         const userId = await redisClient.get(
             `chess-app:socketId:${socket.id}:userId`
         );

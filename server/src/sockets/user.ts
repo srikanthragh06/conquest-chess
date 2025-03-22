@@ -9,6 +9,7 @@ import {
     verifyGuestIdInJWT,
 } from "../helpers/auth";
 import { JwtPayload } from "jsonwebtoken";
+import { redisClient } from "../redis/client";
 
 export const onRegisterUser = async (authToken: string, socket: Socket) => {
     try {
@@ -133,5 +134,44 @@ export const onRegisterUser = async (authToken: string, socket: Socket) => {
         console.error(err);
         const errorMessage = (err as Error)?.message || "Server error";
         return socketEmit(socket, "register-user-error", errorMessage, true);
+    }
+};
+
+export const onOngoingGame = async (socket: Socket) => {
+    try {
+        const userId = await redisClient.get(
+            `chess-app:socketId:${socket.id}:userId`
+        );
+        if (!userId)
+            return socketEmit(
+                socket,
+                "ongoing-game-error",
+                `User with socketID ${socket.id} not registered`,
+                true
+            );
+
+        const ongoingGameId = await redisClient.get(
+            `chess-app:userId:${userId}:gameId`
+        );
+        if (!ongoingGameId) return;
+
+        const gameJSON = await redisClient.get(
+            `chess-app:gameId:${ongoingGameId}:game`
+        );
+        if (!gameJSON) return;
+
+        const game = JSON.parse(gameJSON);
+        if (game.gameStatus.status !== "playing") return;
+
+        if (ongoingGameId)
+            return socketEmit(socket, "get-ongoing-game", ongoingGameId);
+    } catch (err) {
+        console.error(err);
+        socketEmit(
+            socket,
+            "ongoing-game-error",
+            "Failed to fetch ongoing game",
+            true
+        );
     }
 };

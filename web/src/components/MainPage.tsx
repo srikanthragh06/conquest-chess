@@ -42,18 +42,12 @@ const MainPage = ({ children, className = "", hasNavbar }: MainPageProps) => {
 
     if (isLoadingPage || isRegistering) return <LoadingPage />;
     return (
-        <div
-            className={`w-full h-full 
-                        flex flex-`}
-        >
+        <div className={`w-full h-full flex`}>
             <div className="lg:hidden">
                 {hasNavbar && (
                     <Drawer direction="left">
                         <DrawerTrigger>
-                            <FiAlignJustify
-                                className="text-3xl sm:text-4xl md:text-5xl mt-1
-                                                "
-                            />
+                            <FiAlignJustify className="text-3xl sm:text-4xl md:text-5xl mt-1" />
                         </DrawerTrigger>
                         <DrawerContent className=" bg-zinc-900 border-none text-white shadow-lg w-[250px]">
                             <DrawerTitle></DrawerTitle>

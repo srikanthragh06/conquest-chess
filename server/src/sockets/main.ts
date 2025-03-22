@@ -1,5 +1,5 @@
 import { Socket } from "socket.io";
-import { onRegisterUser } from "./user";
+import { onOngoingGame, onRegisterUser } from "./user";
 import {
     onCreateLobby,
     onJoinLobby,
@@ -21,7 +21,7 @@ import {
 } from "./game";
 import { onDisconnect } from "./disconnect";
 import { socketEmit } from "../utils/responseTemplates";
-import { onQueueMatch } from "./queueMatch";
+import { onCancelQueue, onQueueMatch } from "./queueMatch";
 import { consoleLogRed } from "../utils/colorConsoleLogging";
 
 const safeSocketHandler =
@@ -146,7 +146,12 @@ export const handleIOConnection = (socket: Socket) => {
     );
     socket.on(
         "cancel-queue",
-        safeSocketHandler(() => {})
+        safeSocketHandler(() => onCancelQueue(socket))
+    );
+
+    socket.on(
+        "ongoing-game",
+        safeSocketHandler(() => onOngoingGame(socket))
     );
 
     socket.on(
