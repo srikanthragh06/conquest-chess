@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { redisClient } from "../redis/client";
+import { executeWithRetry, redisClient } from "../redis/client";
 import { gameType, guestType } from "../type/state";
 import { Socket } from "socket.io";
 import { transaction } from "../db/postgres";
@@ -26,32 +26,36 @@ export const createGuestInRedis = async () => {
         createdAt: Date.now(),
     };
 
-    const tx = redisClient.multi();
-    tx.set(`chess-app:guestId:${newGuestId}:guest`, JSON.stringify(newGuest));
-    tx.expire(`chess-app:guestId:${newGuestId}:guest`, 7 * 24 * 60 * 60);
+    await redisClient.set(
+        `chess-app:guestId:${newGuestId}:guest`,
+        JSON.stringify(newGuest)
+    );
+    await redisClient.expire(
+        `chess-app:guestId:${newGuestId}:guest`,
+        7 * 24 * 60 * 60
+    );
 
-    const result = await tx.exec();
-    if (result) return newGuest.guestId;
-    throw new Error("Failed to create guest");
+    return newGuest.guestId;
 };
 
 export const addUser2SocketList = async (userId: string, socket: Socket) => {
-    const oldUserId = await redisClient.get(
-        `chess-app:socketId:${socket.id}:userId`
+    await executeWithRetry(
+        redisClient,
+        [`chess-app:socketId:${socket.id}:userId`],
+        async (tx) => {
+            const oldUserId = await redisClient.get(
+                `chess-app:socketId:${socket.id}:userId`
+            );
+            if (oldUserId) {
+                tx.del(`chess-app:socketId:${socket.id}:userId`);
+                tx.del(`chess-app:userId:${oldUserId}:socketId`);
+            }
+            tx.set(`chess-app:socketId:${socket.id}:userId`, userId);
+            tx.set(`chess-app:userId:${userId}:socketId`, socket.id);
+
+            return true;
+        }
     );
-
-    const tx = redisClient.multi();
-
-    if (oldUserId) {
-        tx.del(`chess-app:userId:${oldUserId}:socketId`);
-        tx.del(`chess-app:socketId:${socket.id}:userId`);
-    }
-
-    tx.set(`chess-app:socketId:${socket.id}:userId`, userId);
-    tx.set(`chess-app:userId:${userId}:socketId`, socket.id);
-
-    const result = await tx.exec();
-    if (!result) throw new Error("Failed to register user");
 };
 
 export const handleJoinOldGame = async (socket: Socket, userId: string) => {

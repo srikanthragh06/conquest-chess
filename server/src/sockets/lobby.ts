@@ -2,7 +2,7 @@ import { Socket } from "socket.io";
 import { lobbyType } from "../type/state";
 import { generate16CharUniqueString } from "../utils/utils";
 import { socketEmit } from "../utils/responseTemplates";
-import { redisClient } from "../redis/client";
+import { executeWithRetry, redisClient } from "../redis/client";
 import { handleLeaveLobby } from "../helpers/lobby";
 
 export const onCreateLobby = async (socket: Socket) => {
@@ -18,69 +18,74 @@ export const onCreateLobby = async (socket: Socket) => {
                 true
             );
 
-        const newLobbyId = generate16CharUniqueString();
-
-        const tx = redisClient.multi();
-
         const oldLobbyId = await redisClient.get(
             `chess-app:userId:${userId}:lobbyId`
         );
+        const result = await executeWithRetry(
+            redisClient,
+            [`chess-app:lobbyId:${oldLobbyId}:lobby`],
+            async (tx) => {
+                const newLobbyId = generate16CharUniqueString();
 
-        if (oldLobbyId) {
-            tx.del(`chess-app:userId:${userId}:lobbyId`);
+                if (oldLobbyId) {
+                    tx.del(`chess-app:userId:${userId}:lobbyId`);
 
-            const oldLobbyJSON = await redisClient.get(
-                `chess-app:lobbyId:${oldLobbyId}:lobby`
-            );
-            if (oldLobbyJSON) {
-                const oldLobby: lobbyType = JSON.parse(oldLobbyJSON);
-
-                if (oldLobby.players.includes(userId)) {
-                    oldLobby.players = oldLobby.players.filter(
-                        (playerId: string) => playerId !== userId
+                    const oldLobbyJSON = await redisClient.get(
+                        `chess-app:lobbyId:${oldLobbyId}:lobby`
                     );
-                    socket.leave(oldLobbyId);
+                    if (oldLobbyJSON) {
+                        const oldLobby: lobbyType = JSON.parse(oldLobbyJSON);
 
-                    if (oldLobby.hostId === userId) {
-                        oldLobby.hostId = oldLobby.players[0];
+                        if (oldLobby.players.includes(userId)) {
+                            oldLobby.players = oldLobby.players.filter(
+                                (playerId: string) => playerId !== userId
+                            );
+                            socket.leave(oldLobbyId);
+
+                            if (oldLobby.hostId === userId) {
+                                oldLobby.hostId = oldLobby.players[0];
+                            }
+
+                            tx.set(
+                                `chess-app:lobbyId:${oldLobbyId}:lobby`,
+                                JSON.stringify(oldLobby)
+                            );
+                        }
                     }
-
-                    tx.set(
-                        `chess-app:lobbyId:${oldLobbyId}:lobby`,
-                        JSON.stringify(oldLobby)
-                    );
                 }
+                const newLobby: lobbyType = {
+                    lobbyId: newLobbyId,
+                    hostId: userId,
+                    players: [userId],
+                    matchType: "Blitz",
+                    participants: [null, null],
+                };
+                tx.set(
+                    `chess-app:lobbyId:${newLobbyId}:lobby`,
+                    JSON.stringify(newLobby)
+                );
+                tx.set(`chess-app:userId:${userId}:lobbyId`, newLobbyId);
+
+                return { newLobby };
             }
-        }
-
-        const newLobby: lobbyType = {
-            lobbyId: newLobbyId,
-            hostId: userId,
-            players: [userId],
-            matchType: "Blitz",
-            participants: [null, null],
-        };
-
-        tx.set(
-            `chess-app:lobbyId:${newLobbyId}:lobby`,
-            JSON.stringify(newLobby)
         );
-        tx.set(`chess-app:userId:${userId}:lobbyId`, newLobbyId);
 
-        const result = await tx.exec();
-        if (!result)
+        if (result === null)
             return socketEmit(
                 socket,
                 "create-lobby-error",
-                "Failed to create lobby due to a conflict. Please try again.",
+                "Failed due to conflict",
                 true
             );
-        socket.join(newLobbyId);
 
-        socketEmit(socket, "created-lobby", newLobbyId);
+        const { newLobby } = result;
+
+        socket.join(newLobby.lobbyId);
+
+        socketEmit(socket, "created-lobby", newLobby.lobbyId);
 
         redisClient.publish(
-            `chess-app:lobby-update:${newLobbyId}`,
+            `chess-app:lobby-update:${newLobby.lobbyId}`,
             JSON.stringify(newLobby)
         );
     } catch (err) {
@@ -107,52 +112,69 @@ export const onJoinLobby = async (socket: Socket, lobbyId: string) => {
                 true
             );
 
-        const tx = redisClient.multi();
+        const result = await executeWithRetry(
+            redisClient,
+            [`chess-app:lobbyId:${lobbyId}:lobby`],
+            async (tx) => {
+                const lobbyJSON = await redisClient.get(
+                    `chess-app:lobbyId:${lobbyId}:lobby`
+                );
+                if (!lobbyJSON) {
+                    socketEmit(
+                        socket,
+                        "lobby-details-error",
+                        `Lobby with ID ${lobbyId} does not exist`,
+                        true
+                    );
+                    return null;
+                }
 
-        const lobbyJSON = await redisClient.get(
-            `chess-app:lobbyId:${lobbyId}:lobby`
+                const lobby: lobbyType = JSON.parse(lobbyJSON);
+
+                if (lobby.players.includes(userId)) {
+                    socketEmit(socket, "joined-lobby");
+                    socketEmit(socket, "lobby-details", lobby);
+                    return { lobby };
+                }
+
+                if (lobby.players.length >= 10) {
+                    socketEmit(
+                        socket,
+                        "lobby-details-error",
+                        "This lobby already has its max of 10 players",
+                        true
+                    );
+                    return null;
+                }
+
+                lobby.players.push(userId);
+                if (lobby.players.length === 1) {
+                    lobby.hostId = userId;
+                }
+
+                tx.set(
+                    `chess-app:lobbyId:${lobbyId}:lobby`,
+                    JSON.stringify(lobby)
+                );
+                tx.set(`chess-app:userId:${userId}:lobbyId`, lobbyId);
+
+                return { lobby };
+            }
         );
-        if (!lobbyJSON)
-            return socketEmit(
-                socket,
-                "lobby-details-error",
-                `Lobby with ID ${lobbyId} does not exist`,
-                true
-            );
 
-        const lobby: lobbyType = JSON.parse(lobbyJSON);
-        if (lobby.players.includes(userId)) {
-            socketEmit(socket, "joined-lobby");
-            socketEmit(socket, "lobby-details", lobby);
-            return;
-        }
-
-        if (lobby.players.length >= 10)
-            return socketEmit(
-                socket,
-                "lobby-details-error",
-                "This lobby already has its max of 10 players",
-                true
-            );
-
-        lobby.players.push(userId);
-        if (lobby.players.length === 1) {
-            lobby.hostId = userId;
-        }
-
-        tx.set(`chess-app:lobbyId:${lobbyId}:lobby`, JSON.stringify(lobby));
-        tx.set(`chess-app:userId:${userId}:lobbyId`, lobbyId);
-
-        const result = await tx.exec();
-        if (!result)
+        if (result === null)
             return socketEmit(
                 socket,
                 "join-lobby-error",
                 "Failed to join lobby due to conflict",
                 true
             );
+
+        const { lobby } = result;
+
         socket.join(lobbyId);
         socketEmit(socket, "joined-lobby");
+
         redisClient.publish(
             `chess-app:lobby-update:${lobbyId}`,
             JSON.stringify(lobby)
@@ -180,24 +202,43 @@ export const onMatchSelect = async (
                 true
             );
 
-        const lobbyJSON = await redisClient.get(
-            `chess-app:lobbyId:${lobbyId}:lobby`
+        const result = await executeWithRetry(
+            redisClient,
+            [`chess-app:lobbyId:${lobbyId}:lobby`],
+            async (tx) => {
+                const lobbyJSON = await redisClient.get(
+                    `chess-app:lobbyId:${lobbyId}:lobby`
+                );
+                if (!lobbyJSON) {
+                    socketEmit(
+                        socket,
+                        "match-select-error",
+                        `Lobby with ID ${lobbyId} does not exist`,
+                        true
+                    );
+                    return null;
+                }
+
+                const lobby = JSON.parse(lobbyJSON);
+                lobby.matchType = matchType;
+
+                tx.set(
+                    `chess-app:lobbyId:${lobbyId}:lobby`,
+                    JSON.stringify(lobby)
+                );
+
+                return { lobby };
+            }
         );
-        if (!lobbyJSON)
+
+        if (result === null)
             return socketEmit(
                 socket,
                 "match-select-error",
-                `Lobby with ID ${lobbyId} does not exist`,
-                true
+                "Failed due to conflict"
             );
 
-        const lobby = JSON.parse(lobbyJSON);
-        lobby.matchType = matchType;
-
-        await redisClient.set(
-            `chess-app:lobbyId:${lobbyId}:lobby`,
-            JSON.stringify(lobby)
-        );
+        const { lobby } = result;
 
         redisClient.publish(
             `chess-app:lobby-update:${lobbyId}`,
@@ -213,6 +254,7 @@ export const onMatchSelect = async (
         console.error("Error during match-select:", err);
     }
 };
+
 export const onParticipantsSelect = async (
     socket: Socket,
     lobbyId: string,
@@ -230,43 +272,69 @@ export const onParticipantsSelect = async (
                 true
             );
 
-        const lobbyJSON = await redisClient.get(
-            `chess-app:lobbyId:${lobbyId}:lobby`
+        const result = await executeWithRetry(
+            redisClient,
+            [`chess-app:lobbyId:${lobbyId}:lobby`],
+            async (tx) => {
+                const lobbyJSON = await redisClient.get(
+                    `chess-app:lobbyId:${lobbyId}:lobby`
+                );
+                if (!lobbyJSON) {
+                    socketEmit(
+                        socket,
+                        "participants-select-error",
+                        `Lobby with ID ${lobbyId} does not exist`,
+                        true
+                    );
+                    return null;
+                }
+
+                const lobby = JSON.parse(lobbyJSON);
+                if (
+                    newParticipants[0] &&
+                    !lobby.players.includes(newParticipants[0])
+                ) {
+                    socketEmit(
+                        socket,
+                        "participants-select-error",
+                        `${newParticipants[0]} does not belong to this lobby`,
+                        true
+                    );
+                    return null;
+                }
+
+                if (
+                    newParticipants[1] &&
+                    !lobby.players.includes(newParticipants[1])
+                ) {
+                    socketEmit(
+                        socket,
+                        "participants-select-error",
+                        `${newParticipants[1]} does not belong to this lobby`,
+                        true
+                    );
+                    return null;
+                }
+
+                lobby.participants = newParticipants;
+
+                tx.set(
+                    `chess-app:lobbyId:${lobbyId}:lobby`,
+                    JSON.stringify(lobby)
+                );
+
+                return { lobby };
+            }
         );
-        if (!lobbyJSON)
+
+        if (result === null)
             return socketEmit(
                 socket,
                 "participants-select-error",
-                `Lobby with ID ${lobbyId} does not exist`,
-                true
+                "Failed due to conflict"
             );
 
-        const lobby = JSON.parse(lobbyJSON);
-
-        if (newParticipants[0] && !lobby.players.includes(newParticipants[0])) {
-            return socketEmit(
-                socket,
-                "participants-select-error",
-                `${newParticipants[0]} does not belong to this lobby`,
-                true
-            );
-        }
-
-        if (newParticipants[1] && !lobby.players.includes(newParticipants[1])) {
-            return socketEmit(
-                socket,
-                "participants-select-error",
-                `${newParticipants[1]} does not belong to this lobby`,
-                true
-            );
-        }
-
-        lobby.participants = newParticipants;
-
-        await redisClient.set(
-            `chess-app:lobbyId:${lobbyId}:lobby`,
-            JSON.stringify(lobby)
-        );
+        const { lobby } = result;
 
         redisClient.publish(
             `chess-app:lobby-update:${lobbyId}`,
@@ -291,15 +359,13 @@ export const onLeaveLobby = async (
         const userId = await redisClient.get(
             `chess-app:socketId:${socket.id}:userId`
         );
-        if (!userId) {
-            socketEmit(
+        if (!userId)
+            return socketEmit(
                 socket,
                 "leave-lobby-error",
                 "User not registered",
                 true
             );
-            return;
-        }
 
         await handleLeaveLobby(socket, userId, lobbyId, "leave-lobby-error");
     } catch (err) {

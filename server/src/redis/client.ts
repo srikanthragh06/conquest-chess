@@ -1,4 +1,4 @@
-import { Redis } from "ioredis";
+import { ChainableCommander, Redis } from "ioredis";
 import dotenv from "dotenv";
 import {
     consoleLogCyan,
@@ -68,4 +68,35 @@ export const testRedisConnection = async (retries = MAX_RETRIES) => {
         );
         console.error(err);
     }
+};
+
+export const executeWithRetry = async <T>(
+    redisClient: Redis,
+    keys: string[],
+    transactionFn: (tx: ChainableCommander) => Promise<T | null>,
+    maxRetries: number = 10,
+    retryDelay: number = 50
+): Promise<T | null> => {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            await redisClient.watch(...keys);
+            const tx = redisClient.multi();
+
+            const result = await transactionFn(tx);
+            if (result === null) {
+                await redisClient.unwatch();
+                return null;
+            }
+
+            const txResult = await tx.exec();
+            if (txResult !== null) return result;
+
+            console.log(`Retrying transaction (${attempt}/${maxRetries})...`);
+            await new Promise((resolve) => setTimeout(resolve, retryDelay));
+        } finally {
+            await redisClient.unwatch();
+        }
+    }
+
+    return null;
 };

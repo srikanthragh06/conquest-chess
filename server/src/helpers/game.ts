@@ -1,5 +1,5 @@
 import { Chess } from "chess.js";
-import { gameType, lobbyType, movesType } from "../type/state";
+import { gameType, movesType } from "../type/state";
 import { queryClient, transaction } from "../db/postgres";
 import {
     findOneWithCondition,
@@ -7,14 +7,23 @@ import {
     updateRecords,
 } from "../db/queries";
 import { generate16CharUniqueString } from "../utils/utils";
-import Redis from "ioredis";
+import { redisClient } from "../redis/client";
+import { ChainableCommander } from "ioredis";
 
 export const startGame = async (
-    redisClient: Redis,
+    tx: ChainableCommander,
     matchType: "Blitz" | "Bullet" | "Rapid",
     participants: [string | null, string | null]
 ) => {
-    const newGameId = generate16CharUniqueString();
+    let newGameId = generate16CharUniqueString();
+    let isExists = true;
+    while (isExists) {
+        const game = await redisClient.get(
+            `chess-app:gameId:${newGameId}:game`
+        );
+        if (!game) isExists = false;
+        newGameId = generate16CharUniqueString();
+    }
 
     const randomIndex = Math.floor(Math.random() * 2);
     const whiteId = participants[randomIndex] as string;
@@ -38,14 +47,12 @@ export const startGame = async (
         },
     };
 
-    const tx = redisClient.multi();
-
     tx.set(`chess-app:gameId:${newGameId}:game`, JSON.stringify(newGame));
 
     tx.set(`chess-app:userId:${whiteId}:gameId`, newGameId);
     tx.set(`chess-app:userId:${blackId}:gameId`, newGameId);
 
-    return { tx, newGame };
+    return newGame;
 };
 
 export const updateRemainingTime = (game: gameType, moves: movesType) => {

@@ -1,5 +1,5 @@
 import { Socket } from "socket.io";
-import { redisClient } from "../redis/client";
+import { executeWithRetry, redisClient } from "../redis/client";
 import { socketEmit } from "../utils/responseTemplates";
 import { startGame } from "../helpers/game";
 
@@ -19,42 +19,52 @@ export const onQueueMatch = async (
                 true
             );
 
-        const queueUserId = await redisClient.get(
-            `chess-app:queueMatch:${matchType}:matchType`
+        const result = await executeWithRetry(
+            redisClient,
+            [`chess-app:queueMatch:${matchType}:matchType`],
+            async (tx) => {
+                const queueUserId = await redisClient.get(
+                    `chess-app:queueMatch:${matchType}:matchType`
+                );
+
+                if (!queueUserId) {
+                    tx.set(
+                        `chess-app:queueMatch:${matchType}:matchType`,
+                        userId
+                    );
+                    return {};
+                }
+
+                if (queueUserId === userId) {
+                    socketEmit(
+                        socket,
+                        "queue-match-error",
+                        `User ${userId} is already queued`,
+                        true
+                    );
+                    return null;
+                }
+
+                const newGame = await startGame(tx, matchType, [
+                    queueUserId,
+                    userId,
+                ]);
+
+                const whiteSocketId = await redisClient.get(
+                    `chess-app:userId:${newGame.whiteId}:socketId`
+                );
+
+                const blackSocketId = await redisClient.get(
+                    `chess-app:userId:${newGame.blackId}:socketId`
+                );
+
+                tx.del(`chess-app:queueMatch:${matchType}:matchType`);
+
+                return { newGame, whiteSocketId, blackSocketId };
+            }
         );
 
-        if (!queueUserId) {
-            await redisClient.set(
-                `chess-app:queueMatch:${matchType}:matchType`,
-                userId
-            );
-            return;
-        }
-
-        if (queueUserId === userId)
-            return socketEmit(
-                socket,
-                "queue-match-error",
-                `User ${userId} is already queued`,
-                true
-            );
-
-        const { tx, newGame } = await startGame(redisClient, matchType, [
-            queueUserId,
-            userId,
-        ]);
-        const whiteSocketId = await redisClient.get(
-            `chess-app:userId:${newGame.whiteId}:socketId`
-        );
-
-        const blackSocketId = await redisClient.get(
-            `chess-app:userId:${newGame.blackId}:socketId`
-        );
-
-        tx.del(`chess-app:queueMatch:${matchType}:matchType`);
-
-        const result = await tx.exec();
-        if (!result)
+        if (result === null)
             return socketEmit(
                 socket,
                 "queue-match-error",
@@ -62,14 +72,17 @@ export const onQueueMatch = async (
                 true
             );
 
-        redisClient.publish(
-            `chess-app:started-game:${newGame.gameId}`,
-            JSON.stringify({
-                gameId: newGame.gameId,
-                whiteSocketId,
-                blackSocketId,
-            })
-        );
+        const { newGame, whiteSocketId, blackSocketId } = result;
+
+        if (newGame && whiteSocketId && blackSocketId)
+            redisClient.publish(
+                `chess-app:started-game:${newGame.gameId}`,
+                JSON.stringify({
+                    gameId: newGame.gameId,
+                    whiteSocketId,
+                    blackSocketId,
+                })
+            );
     } catch (err) {
         console.error(err);
         socketEmit(socket, "queue-match-error", "Failed to queue match", true);
@@ -89,16 +102,23 @@ export const onCancelQueue = async (socket: Socket) => {
                 true
             );
 
-        ["Blitz", "Rapid", "Bullet"].forEach(async (matchType) => {
-            const queueUserId = await redisClient.get(
-                `chess-app:queueMatch:${matchType}:matchType`
-            );
-            if (queueUserId === userId) {
-                await redisClient.del(
-                    `chess-app:queueMatch:${matchType}:matchType`
-                );
+        await executeWithRetry(
+            redisClient,
+            [
+                `chess-app:queueMatch:Blitz:matchType`,
+                `chess-app:queueMatch:Rapid:matchType`,
+                `chess-app:queueMatch:Bullet:matchType`,
+            ],
+            async (tx) => {
+                for (const matchType of ["Blitz", "Rapid", "Bullet"]) {
+                    const queueUserId = await redisClient.get(
+                        `chess-app:queueMatch:${matchType}:matchType`
+                    );
+                    if (queueUserId === userId)
+                        tx.del(`chess-app:queueMatch:${matchType}:matchType`);
+                }
             }
-        });
+        );
     } catch (err) {
         console.error(err);
         socketEmit(socket, "queue-match-error", "Failed to queue match", true);

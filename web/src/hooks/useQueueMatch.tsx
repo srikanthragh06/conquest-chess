@@ -42,6 +42,9 @@ const useQueueMatch = () => {
         });
         socket.on("start-game-error", (msg: string) => {
             setErrorDialog(msg);
+            setErrorTitle("Start Game Error");
+            setIsErrorDialog(true);
+            setIsQueueing(false);
         });
 
         socket.on("queue-match-error", (msg) => {
