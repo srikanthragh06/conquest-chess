@@ -17,15 +17,27 @@ import { app, io, server } from "./server";
 import { testRedisConnection } from "./redis/client";
 import { sendSuccessResponse } from "./utils/responseTemplates";
 
-io.on("connection", handleIOConnection);
-
 dotenv.config();
+
+io.on("connection", handleIOConnection);
 
 app.use(express.json());
 
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use(cors({ origin: process.env.CLIENT_URL }));
+if (process.env.MODE === "dev" && process.env.CLIENT_URL) {
+    app.use(cors({ origin: process.env.CLIENT_URL }));
+} else if (
+    process.env.MODE === "prod" &&
+    process.env.CLIENT_URL_1 &&
+    process.env.CLIENT_URL_2
+) {
+    app.use(
+        cors({ origin: [process.env.CLIENT_URL_1, process.env.CLIENT_URL_2] })
+    );
+} else {
+    throw new Error("Invalid MODE: CORS is not configured.");
+}
 
 app.use(logRequest);
 
