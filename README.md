@@ -25,12 +25,11 @@ Conquest Chess is a multiplayer chess web application similar to Chess.com. I bu
 
 ### Steps to Run Locally  
 
-1. **Clone the repository**  
-   ```sh
-   git clone https://github.com/your-username/conquest-chess.git
-   cd conquest-chess
-   docker-compose up --build -d
-    ```
+```sh
+git clone https://github.com/your-username/conquest-chess.git
+cd conquest-chess
+docker-compose up --build -d
+ ```
 
 ## Live Demo  
 
