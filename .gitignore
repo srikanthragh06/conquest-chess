@@ -10,4 +10,3 @@ dist
 .env
 .*Env
 *.prod
-*.prod.yml

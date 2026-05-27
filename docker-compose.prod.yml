@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+    server:
+        build:
+            context: ./server
+            dockerfile: Dockerfile.prod
+        ports:
+            - "3000:3000"
+        env_file:
+            - ./server/.env.prod
+        depends_on:
+            - redis
+            - postgres
+        restart: unless-stopped
+
+    redis:
+        image: redis:latest
+        restart: unless-stopped
+
+    postgres:
+        image: postgres:latest
+        environment:
+            POSTGRES_USER: chessapp
+            POSTGRES_PASSWORD: chessapp
+            POSTGRES_DB: chessapp
+        volumes:
+            - postgres-data:/var/lib/postgresql/data
+            - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+        restart: unless-stopped
+
+volumes:
+    postgres-data:
