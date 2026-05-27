@@ -33,4 +33,4 @@ docker-compose up --build -d
 
 ## Live Demo  
 
-🔗 [Conquest Chess](https://conquestchess.fun) 
+🔗 [Conquest Chess](https://conquestchess.1k5.in)
